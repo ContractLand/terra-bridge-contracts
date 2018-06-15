@@ -242,6 +242,7 @@ contract.only('HomeBridge', async (accounts) => {
       const processed = new web3.BigNumber(2).pow(255).add(2);
       markedAsProcessed.should.be.bignumber.equal(processed)
     })
+
     it('should not allow to double submit', async () => {
       const recipient = accounts[5];
       const value = '1';

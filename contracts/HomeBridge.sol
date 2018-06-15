@@ -10,17 +10,17 @@ contract HomeBridge is Initializable, BasicBridge {
 
     /* Beginning of V1 storage variables */
 
-    // mapping between message hash and message. Message is the hash of (recipientAccount, depositValue, transactionHash)
+    // mapping between message hash and deposit message. Message is the hash of (recipientAccount, depositValue, transactionHash)
     mapping(bytes32 => bytes) public messages;
-    // mapping between hash of (message hash, validator index) to the validator signature
+    // mapping between hash of (deposit message hash, validator index) to the validator signature
     mapping(bytes32 => bytes) public signatures;
-    //
+    // mapping between hash of (validator, withdrawl message hash) to whether the withdrawl was signed by the validator
     mapping(bytes32 => bool) public withdrawalsSigned;
-    //
+    // mapping between the withdrawl message hash and the number of validator signatures
     mapping(bytes32 => uint256) public numWithdrawalsSigned;
-    // mapping between the hash of (validator, message hash) to whether the message was signed by the validator
+    // mapping between the hash of (validator, deposit message hash) to whether the deposit was signed by the validator
     mapping(bytes32 => bool) public messagesSigned;
-    // mapping between the message hash and the number of validator signatures
+    // mapping between the deposit message hash and the number of validator signatures
     mapping(bytes32 => uint256) public numMessagesSigned;
 
     /* End of V1 storage variables */
@@ -82,7 +82,7 @@ contract HomeBridge is Initializable, BasicBridge {
 
         if (signed >= requiredSignatures()) {
             // If the bridge contract does not own enough tokens to transfer
-            // it will couse funds lock on the home side of the bridge
+            // it will cause funds lock on the home side of the bridge
             numWithdrawalsSigned[hashMsg] = markAsProcessed(signed);
             recipient.transfer(value);
             emit Withdraw(recipient, value, transactionHash);
