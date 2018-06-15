@@ -1,0 +1,22 @@
+{
+  "name": "Terra-Bridge-Contracts",
+  "version": "1.0.0",
+  "description": "A erc-20 to erc20, ether to erc20 and erc20 to ether bridge between EVM based chains",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Peter He",
+  "license": "ISC",
+  "dependencies": {
+    "chai": "^4.1.2",
+    "chai-as-promised": "^7.1.1",
+    "chai-bignumber": "^2.0.2",
+    "openzeppelin-solidity": "^1.10.0",
+    "truffle": "^4.1.11",
+    "web3-utils": "^1.0.0-beta.34",
+    "zos-lib": "^1.0.0"
+  }
+}
