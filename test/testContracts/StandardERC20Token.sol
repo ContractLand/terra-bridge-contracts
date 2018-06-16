@@ -10,7 +10,7 @@ contract StandardERC20Token is StandardToken {
 
   uint256 public constant INITIAL_SUPPLY = 1000000 * (10 ** uint256(decimals));
 
-  function StandardERC20Token() public {
+  constructor() public {
     totalSupply_ = INITIAL_SUPPLY;
     balances[msg.sender] = INITIAL_SUPPLY;
   }
