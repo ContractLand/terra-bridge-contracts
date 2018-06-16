@@ -1,7 +1,7 @@
 const ForeignBridge = artifacts.require("ForeignBridge.sol");
 const BridgeValidators = artifacts.require("BridgeValidators.sol");
-
 const StandardERC20Token = artifacts.require("StandardERC20Token.sol");
+
 const {ERROR_MSG, ZERO_ADDRESS, ERROR_MSG_OPCODE} = require('./setup');
 const {createMessage, sign, signatureToVRS, strip0x} = require('./helpers/helpers');
 const oneEther = web3.toBigNumber(web3.toWei(1, "ether"));
