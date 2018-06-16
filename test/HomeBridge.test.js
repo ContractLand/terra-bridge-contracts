@@ -9,7 +9,7 @@ const gasPrice = Web3Utils.toWei('1', 'gwei');
 const oneEther = web3.toBigNumber(web3.toWei(1, "ether"));
 const halfEther = web3.toBigNumber(web3.toWei(0.5, "ether"));
 
-contract.only('HomeBridge', async (accounts) => {
+contract('HomeBridge', async (accounts) => {
   let homeContract, validatorContract, authorities, owner;
   before(async () => {
     validatorContract = await BridgeValidators.new()

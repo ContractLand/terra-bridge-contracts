@@ -25,7 +25,6 @@ contract HomeBridge is Initializable, BasicBridge {
 
     /* End of V1 storage variables */
 
-    event GasConsumptionLimitsUpdated(uint256 gas);
     event Deposit (address recipient, uint256 value);
     event Withdraw (address recipient, uint256 value, bytes32 transactionHash);
     event SignedForDeposit(address indexed signer, bytes32 messageHash);
