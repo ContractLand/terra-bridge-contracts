@@ -3,7 +3,7 @@ pragma solidity ^0.4.23;
 import "./libraries/SafeMath.sol";
 import "./libraries/Message.sol";
 import "./BasicBridge.sol";
-import "./upgradeability/Initializable.sol";
+import "./migrations/Initializable.sol";
 
 contract HomeBridge is Initializable, BasicBridge {
     using SafeMath for uint256;

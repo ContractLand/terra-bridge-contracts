@@ -2,7 +2,7 @@ pragma solidity ^0.4.23;
 
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "./libraries/SafeMath.sol";
-import "./upgradeability/Initializable.sol";
+import "./migrations/Initializable.sol";
 
 contract BridgeValidators is Ownable, Initializable {
     using SafeMath for uint256;

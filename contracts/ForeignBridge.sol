@@ -4,7 +4,7 @@ import "./libraries/SafeMath.sol";
 import "./libraries/Message.sol";
 import "./BasicBridge.sol";
 import "./interfaces/ERC20Token.sol";
-import "./upgradeability/Initializable.sol";
+import "./migrations/Initializable.sol";
 
 contract ForeignBridge is BasicBridge, Initializable {
     using SafeMath for uint256;
