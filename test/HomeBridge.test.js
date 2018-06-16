@@ -1,7 +1,7 @@
 const Web3Utils = require('web3-utils');
 const HomeBridge = artifacts.require("HomeBridge.sol");
 const BridgeValidators = artifacts.require("BridgeValidators.sol");
-const {ERROR_MSG, ZERO_ADDRESS} = require('./setup');
+const {ERROR_MSG, ZERO_ADDRESS} = require('./helpers/setup');
 const {createMessage, sign, signatureToVRS} = require('./helpers/helpers');
 const minPerTx = web3.toBigNumber(web3.toWei(0.01, "ether"));
 const requireBlockConfirmations = 8;

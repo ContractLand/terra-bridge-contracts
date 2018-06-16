@@ -1,6 +1,6 @@
 const BridgeValidators = artifacts.require("BridgeValidators.sol");
 const UpgradeableProxy = artifacts.require("AdminUpgradeabilityProxy.sol");
-const {ERROR_MSG, ERROR_MSG_OPCODE, ZERO_ADDRESS} = require('./setup');
+const {ERROR_MSG, ERROR_MSG_OPCODE, ZERO_ADDRESS} = require('./helpers/setup');
 
 contract('BridgeValidators', async (accounts) => {
   let token
