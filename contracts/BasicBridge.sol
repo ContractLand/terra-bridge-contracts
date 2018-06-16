@@ -1,6 +1,6 @@
 pragma solidity ^0.4.23;
 
-import "./IBridgeValidators.sol";
+import "./interfaces/IBridgeValidators.sol";
 import "./libraries/SafeMath.sol";
 
 contract BasicBridge {

@@ -1,6 +1,6 @@
 pragma solidity ^0.4.23;
 
-import "../IBridgeValidators.sol";
+import "../interfaces/IBridgeValidators.sol";
 
 library Message {
     // function uintToString(uint256 inputValue) internal pure returns (string) {
