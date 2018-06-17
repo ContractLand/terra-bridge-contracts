@@ -1,5 +1,6 @@
 const ForeignBridge = artifacts.require("ForeignBridge.sol");
 const BridgeValidators = artifacts.require("BridgeValidators.sol");
+const UpgradeableProxy = artifacts.require("AdminUpgradeabilityProxy.sol");
 const StandardERC20Token = artifacts.require("StandardERC20Token.sol");
 
 const {ERROR_MSG, ZERO_ADDRESS, ERROR_MSG_OPCODE} = require('./helpers/setup');
@@ -270,68 +271,33 @@ contract('ForeignBridge', async (accounts) => {
     })
   })
 
-  // describe('#upgradeable', async () => {
-  //   it('can be upgraded', async () => {
-  //     const REQUIRED_NUMBER_OF_VALIDATORS = 1
-  //     const VALIDATORS = [accounts[1]]
-  //     const PROXY_OWNER  = accounts[0]
-  //     const FOREIGN_DAILY_LIMIT = oneEther;
-  //     const FOREIGN_MAX_AMOUNT_PER_TX = halfEther;
-  //     const FOREIGN_MIN_AMOUNT_PER_TX = minPerTx;
-  //     // Validators Contract
-  //     let validatorsProxy = await EternalStorageProxy.new().should.be.fulfilled;
-  //     const validatorsContractImpl = await BridgeValidators.new().should.be.fulfilled;
-  //     await validatorsProxy.upgradeTo('1', validatorsContractImpl.address).should.be.fulfilled;
-  //     validatorsContractImpl.address.should.be.equal(await validatorsProxy.implementation())
-  //
-  //     validatorsProxy = await BridgeValidators.at(validatorsProxy.address);
-  //     await validatorsProxy.initialize(REQUIRED_NUMBER_OF_VALIDATORS, VALIDATORS, PROXY_OWNER).should.be.fulfilled;
-  //     // POA20
-  //     let token = await POA20.new("POA ERC20 Foundation", "POA20", 18);
-  //
-  //     // ForeignBridge V1 Contract
-  //
-  //     let foreignBridgeProxy = await EternalStorageProxy.new().should.be.fulfilled;
-  //     const foreignBridgeImpl = await ForeignBridge.new().should.be.fulfilled;
-  //     await foreignBridgeProxy.upgradeTo('1', foreignBridgeImpl.address).should.be.fulfilled;
-  //
-  //     foreignBridgeProxy = await ForeignBridge.at(foreignBridgeProxy.address);
-  //     await foreignBridgeProxy.initialize(validatorsProxy.address, token.address, FOREIGN_DAILY_LIMIT, FOREIGN_MAX_AMOUNT_PER_TX, FOREIGN_MIN_AMOUNT_PER_TX, gasPrice, requireBlockConfirmations)
-  //     await token.transferOwnership(foreignBridgeProxy.address).should.be.fulfilled;
-  //
-  //     foreignBridgeProxy.address.should.be.equal(await token.owner());
-  //
-  //     // Deploy V2
-  //     let foreignImplV2 = await ForeignBridgeV2.new();
-  //     let foreignBridgeProxyUpgrade = await EternalStorageProxy.at(foreignBridgeProxy.address);
-  //     await foreignBridgeProxyUpgrade.upgradeTo('2', foreignImplV2.address).should.be.fulfilled;
-  //     foreignImplV2.address.should.be.equal(await foreignBridgeProxyUpgrade.implementation())
-  //
-  //     let foreignBridgeV2Proxy = await ForeignBridgeV2.at(foreignBridgeProxy.address)
-  //     await foreignBridgeV2Proxy.changeTokenOwnership(accounts[2], {from: accounts[4]}).should.be.rejectedWith(ERROR_MSG)
-  //     await foreignBridgeV2Proxy.changeTokenOwnership(accounts[2], {from: PROXY_OWNER}).should.be.fulfilled;
-  //     await token.transferOwnership(foreignBridgeProxy.address, {from: accounts[2]}).should.be.fulfilled;
-  //   })
-  //   it('can be deployed via upgradeToAndCall', async () => {
-  //     const fakeTokenAddress = accounts[7]
-  //     const fakeValidatorsAddress = accounts[6]
-  //     const FOREIGN_DAILY_LIMIT = oneEther;
-  //     const FOREIGN_MAX_AMOUNT_PER_TX = halfEther;
-  //     const FOREIGN_MIN_AMOUNT_PER_TX = minPerTx;
-  //
-  //     let storageProxy = await EternalStorageProxy.new().should.be.fulfilled;
-  //     let foreignBridge =  await ForeignBridge.new();
-  //     let data = foreignBridge.initialize.request(
-  //       fakeValidatorsAddress, fakeTokenAddress, FOREIGN_DAILY_LIMIT, FOREIGN_MAX_AMOUNT_PER_TX, FOREIGN_MIN_AMOUNT_PER_TX, gasPrice, requireBlockConfirmations).params[0].data
-  //     await storageProxy.upgradeToAndCall('1', foreignBridge.address, data).should.be.fulfilled;
-  //     let finalContract = await ForeignBridge.at(storageProxy.address);
-  //     true.should.be.equal(await finalContract.isInitialized());
-  //     fakeValidatorsAddress.should.be.equal(await finalContract.validatorContract())
-  //     FOREIGN_DAILY_LIMIT.should.be.bignumber.equal(await finalContract.dailyLimit())
-  //     FOREIGN_MAX_AMOUNT_PER_TX.should.be.bignumber.equal(await finalContract.maxPerTx())
-  //     FOREIGN_MIN_AMOUNT_PER_TX.should.be.bignumber.equal(await finalContract.minPerTx())
-  //   })
-  // })
+  describe('#upgradeable', async () => {
+    it('can be deployed via upgradeToAndCall', async () => {
+      const fakeTokenAddress = accounts[7]
+      const fakeValidatorsAddress = accounts[6]
+      const FOREIGN_DAILY_LIMIT = oneEther;
+      const FOREIGN_MAX_AMOUNT_PER_TX = halfEther;
+      const FOREIGN_MIN_AMOUNT_PER_TX = minPerTx;
+
+      // Create v1 of bridge using bridge
+      const foreignBridge =  await ForeignBridge.new();
+      const proxyOwner = accounts[1]
+      const proxy = await UpgradeableProxy.new(foreignBridge.address, { from: proxyOwner })
+      const originalContract = await ForeignBridge.at(proxy.address)
+      await originalContract.initialize(fakeValidatorsAddress, fakeTokenAddress, FOREIGN_DAILY_LIMIT, FOREIGN_MAX_AMOUNT_PER_TX, FOREIGN_MIN_AMOUNT_PER_TX, gasPrice, requireBlockConfirmations).should.be.fulfilled
+
+      // Upgrade to v2
+      const foreignBridgeNew = await ForeignBridge.new()
+      await proxy.upgradeTo(foreignBridgeNew.address, { from: proxyOwner })
+      const upgradedContract = await ForeignBridge.at(proxy.address)
+
+      true.should.be.equal(await upgradedContract.initialized());
+      fakeValidatorsAddress.should.be.equal(await upgradedContract.validatorContract())
+      FOREIGN_DAILY_LIMIT.should.be.bignumber.equal(await upgradedContract.dailyLimit())
+      FOREIGN_MAX_AMOUNT_PER_TX.should.be.bignumber.equal(await upgradedContract.maxPerTx())
+      FOREIGN_MIN_AMOUNT_PER_TX.should.be.bignumber.equal(await upgradedContract.minPerTx())
+    })
+  })
 
   // describe('#claimTokens', async () => {
   //   it('can send erc20', async () => {
