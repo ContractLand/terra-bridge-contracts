@@ -1,0 +1,18 @@
+{
+  "name": "terra-bridge-deployment",
+  "version": "1.0.0",
+  "description": "Deployment scripts for the terra-bridge",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Peter He",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^5.0.1",
+    "ethereumjs-tx": "^1.3.4",
+    "node-fetch": "^2.1.2",
+    "pkg": "^4.3.1",
+    "web3": "^1.0.0-beta.33"
+  }
+}
