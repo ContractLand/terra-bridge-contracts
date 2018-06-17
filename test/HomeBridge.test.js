@@ -17,7 +17,7 @@ contract('HomeBridge', async (accounts) => {
     validatorContract = await BridgeValidators.new()
     authorities = [accounts[1]];
     owner = accounts[0]
-    await validatorContract.initialize(1, authorities, { from: owner })
+    await validatorContract.initialize(1, authorities, owner, { from: owner })
   })
   describe('#initialize', async() => {
     beforeEach(async () => {
@@ -199,7 +199,7 @@ contract('HomeBridge', async (accounts) => {
       let validatorContractWith2Signatures = await BridgeValidators.new()
       let authoritiesTwoAccs = [accounts[1], accounts[2], accounts[3]];
       let ownerOfValidators = accounts[0]
-      await validatorContractWith2Signatures.initialize(2, authoritiesTwoAccs, { from: ownerOfValidators} )
+      await validatorContractWith2Signatures.initialize(2, authoritiesTwoAccs, ownerOfValidators, { from: ownerOfValidators} )
       let homeBridgeWithTwoSigs = await HomeBridge.new();
       await homeBridgeWithTwoSigs.initialize(validatorContractWith2Signatures.address, oneEther, halfEther, minPerTx, gasPrice, requireBlockConfirmations);
 
@@ -270,7 +270,7 @@ contract('HomeBridge', async (accounts) => {
       let validatorContractWith2Signatures = await BridgeValidators.new()
       let authoritiesTwoAccs = [accounts[1], accounts[2], accounts[3]];
       let ownerOfValidators = accounts[0]
-      await validatorContractWith2Signatures.initialize(2, authoritiesTwoAccs, { from: ownerOfValidators })
+      await validatorContractWith2Signatures.initialize(2, authoritiesTwoAccs, ownerOfValidators, { from: ownerOfValidators })
       let homeBridgeWithTwoSigs = await HomeBridge.new();
       await homeBridgeWithTwoSigs.initialize(validatorContractWith2Signatures.address, oneEther, halfEther, minPerTx, gasPrice, requireBlockConfirmations);
 
@@ -315,7 +315,7 @@ contract('HomeBridge', async (accounts) => {
       validatorContractWith2Signatures = await BridgeValidators.new()
       authoritiesTwoAccs = [accounts[1], accounts[2], accounts[3]];
       ownerOfValidators = accounts[0]
-      await validatorContractWith2Signatures.initialize(2, authoritiesTwoAccs, { from: ownerOfValidators })
+      await validatorContractWith2Signatures.initialize(2, authoritiesTwoAccs, ownerOfValidators, { from: ownerOfValidators })
       homeBridgeWithTwoSigs = await HomeBridge.new();
       await homeBridgeWithTwoSigs.initialize(validatorContractWith2Signatures.address, oneEther, halfEther, minPerTx, gasPrice, requireBlockConfirmations);
     })

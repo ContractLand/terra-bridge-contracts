@@ -17,10 +17,10 @@ contract BridgeValidators is Ownable, Initializable {
     event ValidatorRemoved (address validator);
     event RequiredSignaturesChanged (uint256 requiredSignatures);
 
-    function initialize(uint256 _requiredSignatures, address[] _initialValidators)
+    function initialize(uint256 _requiredSignatures, address[] _initialValidators, address _owner)
       public isInitializer
     {
-        owner = msg.sender;
+        setOwner(_owner);
         require(_requiredSignatures != 0);
         require(_initialValidators.length >= _requiredSignatures);
         for (uint256 i = 0; i < _initialValidators.length; i++) {
@@ -32,6 +32,11 @@ contract BridgeValidators is Ownable, Initializable {
         }
         require(validatorCount >= _requiredSignatures);
         requiredSignatures = _requiredSignatures;
+    }
+
+    function setOwner(address _owner) private {
+        require(_owner != address(0));
+        owner = _owner;
     }
 
     function addValidator(address _validator) external onlyOwner {

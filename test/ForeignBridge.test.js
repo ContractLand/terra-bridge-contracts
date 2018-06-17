@@ -33,7 +33,7 @@ contract('ForeignBridge', async (accounts) => {
     validatorContract = await BridgeValidators.new()
     authorities = [accounts[1], accounts[2]];
     owner = accounts[0]
-    await validatorContract.initialize(1, authorities, { from: owner })
+    await validatorContract.initialize(1, authorities, owner, { from: owner })
   })
 
   describe('#initialize', async () => {
@@ -148,7 +148,7 @@ contract('ForeignBridge', async (accounts) => {
       twoAuthorities = [accounts[0], accounts[1]];
       ownerOfValidatorContract = accounts[3]
       const halfEther = web3.toBigNumber(web3.toWei(0.5, "ether"));
-      await multisigValidatorContract.initialize(2, twoAuthorities, {from: ownerOfValidatorContract})
+      await multisigValidatorContract.initialize(2, twoAuthorities, ownerOfValidatorContract, {from: ownerOfValidatorContract})
       foreignBridgeWithMultiSignatures = await ForeignBridge.new()
       const oneEther = web3.toBigNumber(web3.toWei(1, "ether"));
       await foreignBridgeWithMultiSignatures.initialize(multisigValidatorContract.address, erc20token.address, oneEther, halfEther, minPerTx, gasPrice, requireBlockConfirmations, {from: ownerOfValidatorContract});

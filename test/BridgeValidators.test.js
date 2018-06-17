@@ -16,9 +16,9 @@ contract('BridgeValidators', async (accounts) => {
       false.should.be.equal(await bridgeValidators.isValidator(accounts[1]))
       false.should.be.equal(await bridgeValidators.initialized())
       '0'.should.be.bignumber.equal(await bridgeValidators.requiredSignatures())
-      await bridgeValidators.initialize(3, [accounts[0], accounts[1]], {from: accounts[2]}).should.be.rejectedWith(ERROR_MSG)
-      await bridgeValidators.initialize(2, [accounts[0], accounts[1]], {from: accounts[2]}).should.be.fulfilled;
-      await bridgeValidators.initialize(2, [accounts[0], accounts[1]], {from: accounts[2]}).should.be.rejectedWith(ERROR_MSG);
+      await bridgeValidators.initialize(3, [accounts[0], accounts[1]], accounts[2], {from: accounts[2]}).should.be.rejectedWith(ERROR_MSG)
+      await bridgeValidators.initialize(2, [accounts[0], accounts[1]], accounts[2], {from: accounts[2]}).should.be.fulfilled;
+      await bridgeValidators.initialize(2, [accounts[0], accounts[1]], accounts[2], {from: accounts[2]}).should.be.rejectedWith(ERROR_MSG);
       true.should.be.equal(await bridgeValidators.initialized())
       '2'.should.be.bignumber.equal(await bridgeValidators.requiredSignatures())
       true.should.be.equal(await bridgeValidators.isValidator(accounts[0]))
@@ -33,7 +33,7 @@ contract('BridgeValidators', async (accounts) => {
     let validators = [accounts[0], accounts[1]];
     let requiredSignatures = 2;
     beforeEach(async () => {
-      await bridgeValidators.initialize(requiredSignatures, validators, {from: owner}).should.be.fulfilled
+      await bridgeValidators.initialize(requiredSignatures, validators, owner, {from: owner}).should.be.fulfilled
       '2'.should.be.bignumber.equal(await bridgeValidators.validatorCount())
     })
     it('adds validator', async () => {
@@ -61,7 +61,7 @@ contract('BridgeValidators', async (accounts) => {
     let validators = [accounts[0], accounts[1], accounts[3]];
     let requiredSignatures = 2;
     beforeEach(async () => {
-      await bridgeValidators.initialize(requiredSignatures, validators, {from: owner}).should.be.fulfilled
+      await bridgeValidators.initialize(requiredSignatures, validators, owner, {from: owner}).should.be.fulfilled
       '3'.should.be.bignumber.equal(await bridgeValidators.validatorCount())
     })
 
@@ -101,7 +101,7 @@ contract('BridgeValidators', async (accounts) => {
     let validators = [accounts[0], accounts[1], accounts[3]];
     let requiredSignatures = 2;
     beforeEach(async () => {
-      await bridgeValidators.initialize(requiredSignatures, validators, {from: owner}).should.be.fulfilled
+      await bridgeValidators.initialize(requiredSignatures, validators, owner, {from: owner}).should.be.fulfilled
       '3'.should.be.bignumber.equal(await bridgeValidators.validatorCount())
     })
 
@@ -129,7 +129,7 @@ contract('BridgeValidators', async (accounts) => {
       bridgeValidatorsContract = await BridgeValidators.new({ from: owner });
       proxy = await UpgradeableProxy.new(bridgeValidatorsContract.address, { from: proxyOwner })
       originalContract = await BridgeValidators.at(proxy.address)
-      await originalContract.initialize(required_signatures, validators, {from: owner}).should.be.fulfilled;
+      await originalContract.initialize(required_signatures, validators, owner, {from: owner}).should.be.fulfilled;
     })
 
     it('can be upgraded via proxy', async () => {
