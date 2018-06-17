@@ -1,6 +1,8 @@
-const Web3Utils = require('web3-utils');
 const HomeBridge = artifacts.require("HomeBridge.sol");
+const UpgradeableProxy = artifacts.require("AdminUpgradeabilityProxy.sol");
 const BridgeValidators = artifacts.require("BridgeValidators.sol");
+
+const Web3Utils = require('web3-utils');
 const {ERROR_MSG, ZERO_ADDRESS} = require('./helpers/setup');
 const {createMessage, sign, signatureToVRS} = require('./helpers/helpers');
 const minPerTx = web3.toBigNumber(web3.toWei(0.01, "ether"));
@@ -42,17 +44,23 @@ contract('HomeBridge', async (accounts) => {
       false.should.be.equal(await homeContract.initialized())
     })
 
-    // it('can be deployed via upgradeToAndCall', async () => {
-    //   let storageProxy = await EternalStorageProxy.new().should.be.fulfilled;
-    //   let data = homeContract.initialize.request(validatorContract.address, "3", "2", "1", gasPrice, requireBlockConfirmations).params[0].data
-    //   await storageProxy.upgradeToAndCall('1', homeContract.address, data).should.be.fulfilled;
-    //   let finalContract = await HomeBridge.at(storageProxy.address);
-    //   true.should.be.equal(await finalContract.isInitialized());
-    //   validatorContract.address.should.be.equal(await finalContract.validatorContract())
-    //   "3".should.be.bignumber.equal(await finalContract.dailyLimit())
-    //   "2".should.be.bignumber.equal(await finalContract.maxPerTx())
-    //   "1".should.be.bignumber.equal(await finalContract.minPerTx())
-    // })
+    it('can be upgraded via proxy', async () => {
+      // Create v1 of bridge using bridge
+      const proxyOwner = accounts[1]
+      const proxy = await UpgradeableProxy.new(homeContract.address, { from: proxyOwner })
+      const originalContract = await HomeBridge.at(proxy.address)
+      await originalContract.initialize(validatorContract.address, "3", "2", "1", gasPrice, requireBlockConfirmations).should.be.fulfilled
+      // Upgrade to v2
+      const homeBridgeNew = await HomeBridge.new()
+      await proxy.upgradeTo(homeBridgeNew.address, { from: proxyOwner })
+      const upgradedContract = await HomeBridge.at(proxy.address)
+
+      true.should.be.equal(await upgradedContract.initialized());
+      validatorContract.address.should.be.equal(await upgradedContract.validatorContract())
+      "3".should.be.bignumber.equal(await upgradedContract.dailyLimit())
+      "2".should.be.bignumber.equal(await upgradedContract.maxPerTx())
+      "1".should.be.bignumber.equal(await upgradedContract.minPerTx())
+    })
   })
 
   describe('#fallback', async () => {
