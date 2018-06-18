@@ -40,12 +40,12 @@ async function deployForeign() {
   console.log('========================================\n')
 
   /*** Deploying BridgeValidators for foreign ***/
-  console.log('\n[Foreign] deploying ERC20 token')
+  console.log('\n[Foreign] deploying ERC20 token:')
   const erc20Foreign = await deployContract(ERC20, [], {from: DEPLOYMENT_ACCOUNT_ADDRESS, network: 'foreign', nonce: foreignNonce})
   foreignNonce++;
   console.log('[Foreign] ERC20: ', erc20Foreign.options.address)
 
-  console.log('\n[Foreign] deploying implementation for foreign validators')
+  console.log('\n[Foreign] deploying implementation for foreign validators:')
   let bridgeValidatorsForeign = await deployContract(BridgeValidators, [], {from: DEPLOYMENT_ACCOUNT_ADDRESS, network: 'foreign', nonce: foreignNonce})
   foreignNonce++;
   console.log('[Foreign] BridgeValidators Implementation: ', bridgeValidatorsForeign.options.address)
@@ -69,7 +69,7 @@ async function deployForeign() {
   assert.equal(newProxyOwner.toLocaleLowerCase(), FOREIGN_UPGRADEABLE_ADMIN_VALIDATORS.toLocaleLowerCase());
   foreignNonce++;
 
-  console.log('\n[Foreign] initializing Foreign Bridge Validators with following parameters:\n')
+  console.log('\n[Foreign] initializing Foreign Bridge Validators with following parameters:')
   console.log(`REQUIRED_NUMBER_OF_VALIDATORS: ${REQUIRED_NUMBER_OF_VALIDATORS}, VALIDATORS: ${VALIDATORS}`)
   bridgeValidatorsForeign.options.address = bridgeValidatorsForeignProxy.options.address
   const initializeForeignData = await bridgeValidatorsForeign.methods.initialize(
@@ -112,7 +112,7 @@ async function deployForeign() {
   assert.equal(newProxyBridgeOwner.toLocaleLowerCase(), FOREIGN_UPGRADEABLE_ADMIN_BRIDGE.toLocaleLowerCase());
   foreignNonce++;
 
-  console.log('\n[Foreign] initializing Foreign Bridge with following parameters:\n')
+  console.log('\n[Foreign] initializing Foreign Bridge with following parameters:')
   console.log(`Foreign Validators: ${bridgeValidatorsForeign.options.address},
   FOREIGN_DAILY_LIMIT : ${FOREIGN_DAILY_LIMIT} which is ${Web3Utils.fromWei(FOREIGN_DAILY_LIMIT)} in eth,
   FOREIGN_MAX_AMOUNT_PER_TX: ${FOREIGN_MAX_AMOUNT_PER_TX} which is ${Web3Utils.fromWei(FOREIGN_MAX_AMOUNT_PER_TX)} in eth,
@@ -131,6 +131,8 @@ async function deployForeign() {
   });
   assert.equal(txInitializeBridge.status, '0x1', 'Transaction Failed');
   foreignNonce++;
+
+  console.log('\n***Foreign Bridge Deployment is complete***\n')
 
   return {
     foreignBridge: {
