@@ -6,7 +6,7 @@ require('dotenv').config({
 const assert = require('assert');
 
 const {deployContract, sendRawTx} = require('./deploymentUtils');
-const {web3Foreign, deploymentPrivateKey, FOREIGN_RPC_URL} = require('./web3');
+const {web3Foreign, deploymentPrivateKey, FOREIGN_RPC_URL, PROXY_ADMIN_ADDRESS_SLOT} = require('./web3');
 
 // const POA20 = require('../../build/contracts/POA20.json');
 // const EternalStorageProxy = require('../../build/contracts/EternalStorageProxy.json');
@@ -28,11 +28,9 @@ const {
   FOREIGN_MAX_AMOUNT_PER_TX,
   FOREIGN_MIN_AMOUNT_PER_TX,
   FOREIGN_REQUIRED_BLOCK_CONFIRMATIONS,
-
 } = process.env;
 
 async function deployForeign() {
-  const admin_storage_slot = '0x10d6a54a4754c8869d6886b5f5d7fbfa5b4522237ea5c60d11bc4e7a1ff9390b'
   let foreignNonce = await web3Foreign.eth.getTransactionCount(DEPLOYMENT_ACCOUNT_ADDRESS);
 
   console.log('========================================')
@@ -65,7 +63,7 @@ async function deployForeign() {
     url: FOREIGN_RPC_URL
   })
   assert.equal(txProxyDataTransfer.status, '0x1', 'Transaction Failed');
-  const newProxyOwner = await web3Foreign.eth.getStorageAt(bridgeValidatorsForeignProxy.options.address, web3Foreign.utils.toBN(admin_storage_slot))
+  const newProxyOwner = await web3Foreign.eth.getStorageAt(bridgeValidatorsForeignProxy.options.address, web3Foreign.utils.toBN(PROXY_ADMIN_ADDRESS_SLOT))
   assert.equal(newProxyOwner.toLocaleLowerCase(), FOREIGN_UPGRADEABLE_ADMIN_VALIDATORS.toLocaleLowerCase());
   foreignNonce++;
 
@@ -108,7 +106,7 @@ async function deployForeign() {
     url: FOREIGN_RPC_URL
   })
   assert.equal(txForeignBridgeProxyTransferData.status, '0x1', 'Transaction Failed');
-  const newProxyBridgeOwner = await web3Foreign.eth.getStorageAt(foreignBridgeProxy.options.address, web3Foreign.utils.toBN(admin_storage_slot))
+  const newProxyBridgeOwner = await web3Foreign.eth.getStorageAt(foreignBridgeProxy.options.address, web3Foreign.utils.toBN(PROXY_ADMIN_ADDRESS_SLOT))
   assert.equal(newProxyBridgeOwner.toLocaleLowerCase(), FOREIGN_UPGRADEABLE_ADMIN_BRIDGE.toLocaleLowerCase());
   foreignNonce++;
 
