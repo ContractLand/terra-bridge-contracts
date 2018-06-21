@@ -6,7 +6,8 @@
     "test": "test"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "npm run clear-build && truffle compile",
+    "clear-build": "rm -rf build"
   },
   "author": "Peter He",
   "license": "ISC",
