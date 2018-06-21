@@ -102,22 +102,6 @@ async function deployForeign() {
   assert.equal(validatorOwner.toLowerCase(), FOREIGN_OWNER_MULTISIG.toLocaleLowerCase());
   foreignNonce++;
 
-  console.log('\n[Foreign] transfer all created token to foreign bridge contract:')
-  const transferData = await erc20Foreign.methods.transfer(
-    bridgeValidatorsForeign.options.address, Web3Utils.toWei(FOREIGN_TOKEN_TOTAL)
-  ).encodeABI({from: DEPLOYMENT_ACCOUNT_ADDRESS});
-  const txTransfer = await sendRawTx({
-    data: transferData,
-    nonce: foreignNonce,
-    to: erc20Foreign.options.address,
-    privateKey: deploymentPrivateKey,
-    url: FOREIGN_RPC_URL
-  });
-  assert.equal(txTransfer.status, '0x1', 'Transaction Failed');
-  const bridgeBalance = await erc20Foreign.methods.balanceOf(bridgeValidatorsForeign.options.address).call();
-  assert.equal(Web3Utils.fromWei(bridgeBalance), FOREIGN_TOKEN_TOTAL);
-  foreignNonce++;
-
   /*** Deploying ForeignBridge ***/
   console.log('\n[Foreign] deploying foreignBridge implementation:')
   const foreignBridgeImplementation = await deployContract(ForeignBridge, [], {from: DEPLOYMENT_ACCOUNT_ADDRESS, network: 'foreign', nonce: foreignNonce})
@@ -161,6 +145,22 @@ async function deployForeign() {
     url: FOREIGN_RPC_URL
   });
   assert.equal(txInitializeBridge.status, '0x1', 'Transaction Failed');
+  foreignNonce++;
+
+  console.log('\n[Foreign] transfer all created token to foreign bridge contract:')
+  const transferData = await erc20Foreign.methods.transfer(
+    foreignBridgeImplementation.options.address, Web3Utils.toWei(FOREIGN_TOKEN_TOTAL)
+  ).encodeABI({from: DEPLOYMENT_ACCOUNT_ADDRESS});
+  const txTransfer = await sendRawTx({
+    data: transferData,
+    nonce: foreignNonce,
+    to: erc20Foreign.options.address,
+    privateKey: deploymentPrivateKey,
+    url: FOREIGN_RPC_URL
+  });
+  assert.equal(txTransfer.status, '0x1', 'Transaction Failed');
+  const bridgeBalance = await erc20Foreign.methods.balanceOf(foreignBridgeImplementation.options.address).call();
+  assert.equal(Web3Utils.fromWei(bridgeBalance), FOREIGN_TOKEN_TOTAL);
   foreignNonce++;
 
   console.log('\n***Foreign Bridge Deployment is complete***\n')
