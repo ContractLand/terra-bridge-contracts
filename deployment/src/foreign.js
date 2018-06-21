@@ -26,6 +26,9 @@ const {
   FOREIGN_MAX_AMOUNT_PER_TX,
   FOREIGN_MIN_AMOUNT_PER_TX,
   FOREIGN_REQUIRED_BLOCK_CONFIRMATIONS,
+  FOREIGN_TOKEN_NAME,
+  FOREIGN_TOKEN_SYMBOL,
+  FOREIGN_TOKEN_TOTAL
 } = process.env;
 
 async function deployForeign() {
@@ -37,7 +40,7 @@ async function deployForeign() {
 
   /*** Deploying BridgeValidators for foreign ***/
   console.log('\n[Foreign] deploying ERC20 token:')
-  const erc20Foreign = await deployContract(ERC20, [], {from: DEPLOYMENT_ACCOUNT_ADDRESS, network: 'foreign', nonce: foreignNonce})
+  const erc20Foreign = await deployContract(ERC20, [FOREIGN_TOKEN_NAME, FOREIGN_TOKEN_SYMBOL, Web3Utils.toWei(FOREIGN_TOKEN_TOTAL)], {from: DEPLOYMENT_ACCOUNT_ADDRESS, network: 'foreign', nonce: foreignNonce})
   foreignNonce++;
   console.log('[Foreign] ERC20: ', erc20Foreign.options.address)
 
@@ -81,6 +84,22 @@ async function deployForeign() {
   assert.equal(txInitializeForeign.status, '0x1', 'Transaction Failed');
   const validatorOwner = await bridgeValidatorsForeign.methods.owner().call();
   assert.equal(validatorOwner.toLowerCase(), FOREIGN_OWNER_MULTISIG.toLocaleLowerCase());
+  foreignNonce++;
+
+  console.log('\n[Foreign] transfer all created token to foreign bridge contract:')
+  const transferData = await erc20Foreign.methods.transfer(
+    bridgeValidatorsForeign.options.address, Web3Utils.toWei(FOREIGN_TOKEN_TOTAL)
+  ).encodeABI({from: DEPLOYMENT_ACCOUNT_ADDRESS});
+  const txTransfer = await sendRawTx({
+    data: transferData,
+    nonce: foreignNonce,
+    to: erc20Foreign.options.address,
+    privateKey: deploymentPrivateKey,
+    url: FOREIGN_RPC_URL
+  });
+  assert.equal(txTransfer.status, '0x1', 'Transaction Failed');
+  const bridgeBalance = await erc20Foreign.methods.balanceOf(bridgeValidatorsForeign.options.address).call();
+  assert.equal(Web3Utils.fromWei(bridgeBalance), FOREIGN_TOKEN_TOTAL);
   foreignNonce++;
 
   /*** Deploying ForeignBridge ***/
