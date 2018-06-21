@@ -44,6 +44,22 @@ async function deployForeign() {
   foreignNonce++;
   console.log('[Foreign] ERC20: ', erc20Foreign.options.address)
 
+  // console.log('\n[Foreign] transfer all created token to foreign bridge contract:')
+  // const initializeForeignData = await erc20Foreign.methods.transfer(
+  //   REQUIRED_NUMBER_OF_VALIDATORS, VALIDATORS, FOREIGN_OWNER_MULTISIG
+  // ).encodeABI({from: DEPLOYMENT_ACCOUNT_ADDRESS});
+  // const txInitializeForeign = await sendRawTx({
+  //   data: initializeForeignData,
+  //   nonce: foreignNonce,
+  //   to: bridgeValidatorsForeign.options.address,
+  //   privateKey: deploymentPrivateKey,
+  //   url: FOREIGN_RPC_URL
+  // });
+  // assert.equal(txInitializeForeign.status, '0x1', 'Transaction Failed');
+  // const validatorOwner = await bridgeValidatorsForeign.methods.owner().call();
+  // assert.equal(validatorOwner.toLowerCase(), FOREIGN_OWNER_MULTISIG.toLocaleLowerCase());
+  // foreignNonce++;
+
   console.log('\n[Foreign] deploying implementation for foreign validators:')
   let bridgeValidatorsForeign = await deployContract(BridgeValidators, [], {from: DEPLOYMENT_ACCOUNT_ADDRESS, network: 'foreign', nonce: foreignNonce})
   foreignNonce++;
