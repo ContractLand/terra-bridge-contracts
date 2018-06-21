@@ -7,6 +7,8 @@
   },
   "scripts": {
     "build": "npm run clear-build && truffle compile",
+    "deploy": "node deployment/deploy.js",
+    "build-deploy": "npm run build && npm run deploy",
     "clear-build": "rm -rf build"
   },
   "author": "Peter He",
