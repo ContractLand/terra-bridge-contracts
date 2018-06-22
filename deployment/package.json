@@ -4,7 +4,7 @@
   "description": "Deployment scripts for the terra-bridge",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "deploy": "node deploy.js"
   },
   "author": "Peter He",
   "license": "ISC",
