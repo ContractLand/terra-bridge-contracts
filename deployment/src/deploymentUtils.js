@@ -104,9 +104,14 @@ async function getReceipt(txHash, url) {
   return receipt;
 }
 
+function compareHex(a, b) {
+  return parseInt(a, 16) == parseInt(b, 16)
+}
+
 module.exports = {
   deployContract,
   sendNodeRequest,
   getReceipt,
-  sendRawTx
+  sendRawTx,
+  compareHex
 }

@@ -5,7 +5,7 @@ require('dotenv').config({
 
 const assert = require('assert');
 
-const {deployContract, sendRawTx} = require('./deploymentUtils');
+const {deployContract, sendRawTx, compareHex} = require('./deploymentUtils');
 const {web3Home, deploymentPrivateKey, HOME_RPC_URL, PROXY_ADMIN_ADDRESS_SLOT} = require('./web3');
 
 const Proxy = require('../../build/contracts/AdminUpgradeabilityProxy.json');
@@ -57,7 +57,7 @@ async function deployHome()
   })
   assert.equal(txProxyDataTransfer.status, '0x1', 'Transaction Failed');
   const newProxyOwner = await web3Home.eth.getStorageAt(bridgeValidatorsHomeProxy.options.address, web3Home.utils.toBN(PROXY_ADMIN_ADDRESS_SLOT))
-  assert.equal(newProxyOwner.toLocaleLowerCase(), HOME_UPGRADEABLE_ADMIN_VALIDATORS.toLocaleLowerCase());
+  assert.ok(compareHex(newProxyOwner.toLocaleLowerCase(), HOME_UPGRADEABLE_ADMIN_VALIDATORS.toLocaleLowerCase()));
   homeNonce++;
 
   console.log('\n[Home] initializing Home Bridge Validators with following parameters:')
@@ -75,7 +75,7 @@ async function deployHome()
   })
   assert.equal(txInitialize.status, '0x1', 'Transaction Failed');
   const validatorOwner = await bridgeValidatorsHome.methods.owner().call();
-  assert.equal(validatorOwner.toLocaleLowerCase(), HOME_OWNER_MULTISIG.toLocaleLowerCase());
+  assert.ok(compareHex(validatorOwner.toLocaleLowerCase(), HOME_OWNER_MULTISIG.toLocaleLowerCase()));
   homeNonce++;
 
 
@@ -101,7 +101,7 @@ async function deployHome()
   })
   assert.equal(txHomeBridgeProxyTransferData.status, '0x1', 'Transaction Failed');
   const newProxyBridgeOwner = await web3Home.eth.getStorageAt(homeBridgeProxy.options.address, web3Home.utils.toBN(PROXY_ADMIN_ADDRESS_SLOT))
-  assert.equal(newProxyBridgeOwner.toLocaleLowerCase(), HOME_UPGRADEABLE_ADMIN_BRIDGE.toLocaleLowerCase());
+  assert.ok(compareHex(newProxyBridgeOwner.toLocaleLowerCase(), HOME_UPGRADEABLE_ADMIN_BRIDGE.toLocaleLowerCase()));
   homeNonce++;
 
   console.log('\n[Home] initializing Home Bridge with following parameters:')

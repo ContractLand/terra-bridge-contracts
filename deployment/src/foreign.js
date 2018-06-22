@@ -5,7 +5,7 @@ require('dotenv').config({
 
 const assert = require('assert');
 
-const {deployContract, sendRawTx} = require('./deploymentUtils');
+const {deployContract, sendRawTx, compareHex} = require('./deploymentUtils');
 const {web3Foreign, deploymentPrivateKey, FOREIGN_RPC_URL, PROXY_ADMIN_ADDRESS_SLOT} = require('./web3');
 
 const ERC20 = require('../../build/contracts/StandardERC20Token.json')
@@ -44,22 +44,6 @@ async function deployForeign() {
   foreignNonce++;
   console.log('[Foreign] ERC20: ', erc20Foreign.options.address)
 
-  // console.log('\n[Foreign] transfer all created token to foreign bridge contract:')
-  // const initializeForeignData = await erc20Foreign.methods.transfer(
-  //   REQUIRED_NUMBER_OF_VALIDATORS, VALIDATORS, FOREIGN_OWNER_MULTISIG
-  // ).encodeABI({from: DEPLOYMENT_ACCOUNT_ADDRESS});
-  // const txInitializeForeign = await sendRawTx({
-  //   data: initializeForeignData,
-  //   nonce: foreignNonce,
-  //   to: bridgeValidatorsForeign.options.address,
-  //   privateKey: deploymentPrivateKey,
-  //   url: FOREIGN_RPC_URL
-  // });
-  // assert.equal(txInitializeForeign.status, '0x1', 'Transaction Failed');
-  // const validatorOwner = await bridgeValidatorsForeign.methods.owner().call();
-  // assert.equal(validatorOwner.toLowerCase(), FOREIGN_OWNER_MULTISIG.toLocaleLowerCase());
-  // foreignNonce++;
-
   console.log('\n[Foreign] deploying implementation for foreign validators:')
   let bridgeValidatorsForeign = await deployContract(BridgeValidators, [], {from: DEPLOYMENT_ACCOUNT_ADDRESS, network: 'foreign', nonce: foreignNonce})
   foreignNonce++;
@@ -81,7 +65,7 @@ async function deployForeign() {
   })
   assert.equal(txProxyDataTransfer.status, '0x1', 'Transaction Failed');
   const newProxyOwner = await web3Foreign.eth.getStorageAt(bridgeValidatorsForeignProxy.options.address, web3Foreign.utils.toBN(PROXY_ADMIN_ADDRESS_SLOT))
-  assert.equal(newProxyOwner.toLocaleLowerCase(), FOREIGN_UPGRADEABLE_ADMIN_VALIDATORS.toLocaleLowerCase());
+  assert.ok(compareHex(newProxyOwner.toLocaleLowerCase(), FOREIGN_UPGRADEABLE_ADMIN_VALIDATORS.toLocaleLowerCase()));
   foreignNonce++;
 
   console.log('\n[Foreign] initializing Foreign Bridge Validators with following parameters:')
@@ -99,7 +83,7 @@ async function deployForeign() {
   });
   assert.equal(txInitializeForeign.status, '0x1', 'Transaction Failed');
   const validatorOwner = await bridgeValidatorsForeign.methods.owner().call();
-  assert.equal(validatorOwner.toLowerCase(), FOREIGN_OWNER_MULTISIG.toLocaleLowerCase());
+  assert.ok(compareHex(validatorOwner.toLowerCase(), FOREIGN_OWNER_MULTISIG.toLocaleLowerCase()));
   foreignNonce++;
 
   /*** Deploying ForeignBridge ***/
@@ -124,7 +108,7 @@ async function deployForeign() {
   })
   assert.equal(txForeignBridgeProxyTransferData.status, '0x1', 'Transaction Failed');
   const newProxyBridgeOwner = await web3Foreign.eth.getStorageAt(foreignBridgeProxy.options.address, web3Foreign.utils.toBN(PROXY_ADMIN_ADDRESS_SLOT))
-  assert.equal(newProxyBridgeOwner.toLocaleLowerCase(), FOREIGN_UPGRADEABLE_ADMIN_BRIDGE.toLocaleLowerCase());
+  assert.ok(compareHex(newProxyBridgeOwner.toLocaleLowerCase(), FOREIGN_UPGRADEABLE_ADMIN_BRIDGE.toLocaleLowerCase()));
   foreignNonce++;
 
   console.log('\n[Foreign] initializing Foreign Bridge with following parameters:')
