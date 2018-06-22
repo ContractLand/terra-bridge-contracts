@@ -87,7 +87,7 @@ async function deployHome()
 
   console.log('\n[Home] deploying proxy for homeBridge:')
   let homeBridgeProxy = await deployContract(Proxy, [homeBridgeImplementation.options.address], {from: DEPLOYMENT_ACCOUNT_ADDRESS, nonce: homeNonce})
-  console.log('[Home] BridgeValidators Proxy: ', homeBridgeProxy.options.address)
+  console.log('[Home] HomeBridge Proxy: ', homeBridgeProxy.options.address)
   homeNonce++;
 
   console.log('\n[Home] transferring proxy ownership to multisig for HomeBridge Proxy contract:');
