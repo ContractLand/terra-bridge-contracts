@@ -26,7 +26,7 @@ contract HomeBridge is Initializable, BasicBridge {
     /* End of V1 storage variables */
 
     event Deposit (address recipient, uint256 value);
-    event Withdraw (address recipient, uint256 value, bytes32 transactionHash);
+    event Withdraw (address token, address recipient, uint256 value, bytes32 transactionHash);
     event SignedForDeposit(address indexed signer, bytes32 messageHash);
     event SignedForWithdraw(address indexed signer, bytes32 transactionHash);
     event CollectedSignatures(address authorityResponsibleForRelay, bytes32 messageHash, uint256 NumberOfCollectedSignatures);
@@ -63,8 +63,8 @@ contract HomeBridge is Initializable, BasicBridge {
         emit Deposit(msg.sender, msg.value);
     }
 
-    function withdraw(address recipient, uint256 value, bytes32 transactionHash) external onlyValidator {
-        bytes32 hashMsg = keccak256(recipient, value, transactionHash);
+    function withdraw(address token, address recipient, uint256 value, bytes32 transactionHash) external onlyValidator {
+        bytes32 hashMsg = keccak256(token, recipient, value, transactionHash);
         bytes32 hashSender = keccak256(msg.sender, hashMsg);
         // Duplicated deposits
         require(!withdrawalsSigned[hashSender]);
@@ -83,8 +83,9 @@ contract HomeBridge is Initializable, BasicBridge {
             // If the bridge contract does not own enough tokens to transfer
             // it will cause funds lock on the home side of the bridge
             numWithdrawalsSigned[hashMsg] = markAsProcessed(signed);
-            recipient.transfer(value);
-            emit Withdraw(recipient, value, transactionHash);
+
+            performTransfer(token, recipient, value);
+            emit Withdraw(token, recipient, value, transactionHash);
         }
     }
 
@@ -119,6 +120,13 @@ contract HomeBridge is Initializable, BasicBridge {
             numMessagesSigned[hashMsg] = markAsProcessed(signed);
             emit CollectedSignatures(msg.sender, hashMsg, reqSigs);
         }
+    }
+
+    function performTransfer(address token, address recipient, uint256 value) private {
+      if (token == 0x0) {
+          recipient.transfer(value);
+          return;
+      }
     }
 
     function signature(bytes32 _hash, uint256 _index) public view returns (bytes) {
