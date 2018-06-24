@@ -57,7 +57,7 @@ contract('ForeignBridge', async (accounts) => {
     })
   })
 
-  describe('#deposit', async () => {
+  describe.only('#deposit', async () => {
     beforeEach(async () => {
       foreignBridge = await ForeignBridge.new()
       erc20token = await StandardERC20Token.new('Test', 'TST', web3.toWei(1, "ether"));
@@ -67,7 +67,32 @@ contract('ForeignBridge', async (accounts) => {
       oneEther.should.be.bignumber.equal(await foreignBridge.dailyLimit());
     })
 
-    it('should allow to deposit', async () => {
+    it('should allow deposit of ether', async () => {
+      var recipientAccount = accounts[3];
+      const balanceBefore = await web3.eth.getBalance(recipientAccount)
+      var value = web3.toBigNumber(web3.toWei(0.25, "ether"));
+      var transactionHash = "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80";
+      var message = createMessage(ADDRESS_ZERO, recipientAccount, value, transactionHash);
+      var signature = await sign(authorities[0], message)
+      var vrs = signatureToVRS(signature);
+
+      // Pre-fund the bridge with some ether
+      await web3.eth.sendTransaction({from:accounts[0], to:foreignBridge.address, value: value})
+
+      false.should.be.equal(await foreignBridge.deposits(transactionHash))
+      const {logs} = await foreignBridge.deposit([vrs.v], [vrs.r], [vrs.s], message).should.be.fulfilled
+      logs[0].event.should.be.equal("Deposit")
+      logs[0].args.token.should.be.equal(ADDRESS_ZERO)
+      logs[0].args.recipient.should.be.equal(recipientAccount)
+      logs[0].args.value.should.be.bignumber.equal(value)
+      logs[0].args.transactionHash.should.be.equal(transactionHash);
+
+      const balanceAfter = await web3.eth.getBalance(recipientAccount);
+      balanceAfter.should.be.bignumber.equal(balanceBefore.add(value))
+      true.should.be.equal(await foreignBridge.deposits(transactionHash))
+    })
+
+    it('should allow deposit of token', async () => {
       var recipientAccount = accounts[3];
       const balanceBefore = await erc20token.balanceOf(recipientAccount)
       var value = web3.toBigNumber(web3.toWei(0.25, "ether"));
@@ -88,6 +113,7 @@ contract('ForeignBridge', async (accounts) => {
       balanceAfter.should.be.bignumber.equal(balanceBefore.add(value))
       true.should.be.equal(await foreignBridge.deposits(transactionHash))
     })
+
     it('should allow second deposit with different transactionHash but same recipient and value', async ()=> {
       var recipientAccount = accounts[3];
       const balanceBefore = await erc20token.balanceOf(recipientAccount)

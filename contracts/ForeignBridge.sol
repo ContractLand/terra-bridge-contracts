@@ -23,12 +23,12 @@ contract ForeignBridge is BasicBridge, Initializable {
     event GasConsumptionLimitsUpdated(uint256 gasLimitDepositRelay, uint256 gasLimitWithdrawConfirm);
 
     function initialize(
-        address _validatorContract,
-        uint256 _dailyLimit,
-        uint256 _maxPerTx,
-        uint256 _minPerTx,
-        uint256 _foreignGasPrice,
-        uint256 _requiredBlockConfirmations
+      address _validatorContract,
+      uint256 _dailyLimit,
+      uint256 _maxPerTx,
+      uint256 _minPerTx,
+      uint256 _foreignGasPrice,
+      uint256 _requiredBlockConfirmations
     ) public
       isInitializer
     {
@@ -81,7 +81,22 @@ contract ForeignBridge is BasicBridge, Initializable {
         require(!deposits[txHash]);
         deposits[txHash] = true;
 
-        ERC20Token(token).transfer(recipient, amount);
+        performDeposit(token, recipient, amount);
         emit Deposit(token, recipient, amount, txHash);
+    }
+
+    function performDeposit(address tokenAddress, address recipient, uint256 amount) private {
+        if (tokenAddress == address(0)) {
+            recipient.transfer(amount);
+            return;
+        }
+
+        ERC20Token token = ERC20Token(tokenAddress);
+        require(token.transfer(recipient, amount));
+    }
+
+    function () public payable {
+      // TODO: Empty fallback function to accept ether for testing purpose.
+      // Get ride of this once onTokenTransfer accepts Ether
     }
 }
