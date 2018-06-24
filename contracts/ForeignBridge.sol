@@ -65,10 +65,6 @@ contract ForeignBridge is BasicBridge, Initializable {
         require(token.transfer(_to, balance));
     }
 
-    /* function claimTokensFromErc677(address _token, address _to) external onlyOwner {
-        erc677token().claimTokens(_token, _to);
-    } */
-
     function setGasLimits(uint256 _gasLimitDepositRelay, uint256 _gasLimitWithdrawConfirm) external onlyOwner {
         gasLimitDepositRelay = _gasLimitDepositRelay;
         gasLimitWithdrawConfirm = _gasLimitWithdrawConfirm;

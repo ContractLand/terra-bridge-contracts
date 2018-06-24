@@ -300,45 +300,21 @@ contract('ForeignBridge', async (accounts) => {
     })
   })
 
-  // describe('#claimTokens', async () => {
-  //   it('can send erc20', async () => {
-  //     const owner = accounts[0];
-  //     token = await POA20.new("POA ERC20 Foundation", "POA20", 18);
-  //     foreignBridge = await ForeignBridge.new();
-  //     await foreignBridge.initialize(validatorContract.address, token.address, oneEther, halfEther, minPerTx, gasPrice, requireBlockConfirmations);
-  //     await token.transferOwnership(foreignBridge.address)
-  //
-  //     let tokenSecond = await POA20.new("Roman Token", "RST", 18);
-  //
-  //     await tokenSecond.mint(accounts[0], halfEther).should.be.fulfilled;
-  //     halfEther.should.be.bignumber.equal(await tokenSecond.balanceOf(accounts[0]))
-  //     await tokenSecond.transfer(foreignBridge.address, halfEther);
-  //     '0'.should.be.bignumber.equal(await tokenSecond.balanceOf(accounts[0]))
-  //     halfEther.should.be.bignumber.equal(await tokenSecond.balanceOf(foreignBridge.address))
-  //
-  //     await foreignBridge.claimTokens(tokenSecond.address, accounts[3], {from: owner});
-  //     '0'.should.be.bignumber.equal(await tokenSecond.balanceOf(foreignBridge.address))
-  //     halfEther.should.be.bignumber.equal(await tokenSecond.balanceOf(accounts[3]))
-  //
-  //   })
-  //   it('also calls claimTokens on tokenAddress', async () => {
-  //     const owner = accounts[0];
-  //     token = await POA20.new("POA ERC20 Foundation", "POA20", 18);
-  //     foreignBridge = await ForeignBridge.new();
-  //     await foreignBridge.initialize(validatorContract.address, token.address, oneEther, halfEther, minPerTx, gasPrice, requireBlockConfirmations);
-  //     await token.transferOwnership(foreignBridge.address)
-  //
-  //     let tokenSecond = await POA20.new("Roman Token", "RST", 18);
-  //
-  //     await tokenSecond.mint(accounts[0], 150).should.be.fulfilled;
-  //     '150'.should.be.bignumber.equal(await tokenSecond.balanceOf(accounts[0]))
-  //     await tokenSecond.transfer(token.address, '150');
-  //     '0'.should.be.bignumber.equal(await tokenSecond.balanceOf(accounts[0]))
-  //     '150'.should.be.bignumber.equal(await tokenSecond.balanceOf(token.address))
-  //
-  //     await foreignBridge.claimTokensFromErc677(tokenSecond.address, accounts[3], {from: owner});
-  //     '0'.should.be.bignumber.equal(await tokenSecond.balanceOf(foreignBridge.address))
-  //     '150'.should.be.bignumber.equal(await tokenSecond.balanceOf(accounts[3]))
-  //   })
-  // })
+  describe.only('#claimTokens', async () => {
+    it('can claim erc20', async () => {
+      const owner = accounts[0];
+      foreignBridge = await ForeignBridge.new();
+      await foreignBridge.initialize(validatorContract.address, oneEther, halfEther, minPerTx, gasPrice, requireBlockConfirmations);
+
+      let token = await StandardERC20Token.new('Test', 'TST', halfEther);
+
+      await token.transfer(foreignBridge.address, halfEther);
+      '0'.should.be.bignumber.equal(await token.balanceOf(owner))
+      halfEther.should.be.bignumber.equal(await token.balanceOf(foreignBridge.address))
+
+      await foreignBridge.claimTokens(token.address, accounts[3], {from: owner}).should.be.fulfilled;
+      '0'.should.be.bignumber.equal(await token.balanceOf(foreignBridge.address))
+      halfEther.should.be.bignumber.equal(await token.balanceOf(accounts[3]))
+    })
+  })
 })
