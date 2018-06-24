@@ -192,12 +192,16 @@ contract('ForeignBridge', async (accounts) => {
     })
   })
 
-  describe('#onTokenTransfer', async () => {
+  describe.only('#onTokenTransfer', async () => {
     beforeEach(async () => {
       user = accounts[4]
       erc20token = await StandardERC20Token.new('Test', 'TST', web3.toWei(10, "ether"));
       foreignBridge = await ForeignBridge.new();
       await foreignBridge.initialize(validatorContract.address, erc20token.address, oneEther, halfEther, minPerTx, gasPrice, requireBlockConfirmations);
+    })
+
+    it('should not allow transfer if user does not give allowance', async () => {
+      await foreignBridge.onTokenTransfer(user, halfEther, '0x00', {from: user}).should.be.rejectedWith(ERROR_MSG);
     })
 
     it('should only allow user to transfer tokens for themselves', async ()=> {
