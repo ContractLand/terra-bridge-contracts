@@ -2,6 +2,7 @@ pragma solidity ^0.4.23;
 
 import "./libraries/SafeMath.sol";
 import "./libraries/Message.sol";
+import "./interfaces/IBurnableMintableToken.sol";
 import "./BasicBridge.sol";
 import "./migrations/Initializable.sol";
 
@@ -10,6 +11,8 @@ contract HomeBridge is Initializable, BasicBridge {
 
     /* Beginning of V1 storage variables */
 
+    // mapping between foreign token addresses to home token addresses
+    mapping(address => address) public foreignToHomeTokenMap;
     // mapping between message hash and deposit message. Message is the hash of (recipientAccount, depositValue, transactionHash)
     mapping(bytes32 => bytes) public messages;
     // mapping between hash of (deposit message hash, validator index) to the validator signature
@@ -64,7 +67,10 @@ contract HomeBridge is Initializable, BasicBridge {
     }
 
     function withdraw(address token, address recipient, uint256 value, bytes32 transactionHash) external onlyValidator {
-        bytes32 hashMsg = keccak256(token, recipient, value, transactionHash);
+        require(token == address(0) || foreignToHomeTokenMap[token] != address(0));
+
+        address homeToken = foreignToHomeTokenMap[token];
+        bytes32 hashMsg = keccak256(homeToken, recipient, value, transactionHash);
         bytes32 hashSender = keccak256(msg.sender, hashMsg);
         // Duplicated deposits
         require(!withdrawalsSigned[hashSender]);
@@ -84,8 +90,10 @@ contract HomeBridge is Initializable, BasicBridge {
             // it will cause funds lock on the home side of the bridge
             numWithdrawalsSigned[hashMsg] = markAsProcessed(signed);
 
-            performTransfer(token, recipient, value);
-            emit Withdraw(token, recipient, value, transactionHash);
+            // Passing the mapped home token address here even when token address is 0x0. This is okay because
+            // by default the address mapped to 0x0 will also be 0x0
+            performTransfer(homeToken, recipient, value);
+            emit Withdraw(homeToken, recipient, value, transactionHash);
         }
     }
 
@@ -122,11 +130,18 @@ contract HomeBridge is Initializable, BasicBridge {
         }
     }
 
+    // TODO: make this onlyOwner
+    function registerToken(address foreignAddress, address homeAddress) public {
+      foreignToHomeTokenMap[foreignAddress] = homeAddress;
+    }
+
     function performTransfer(address token, address recipient, uint256 value) private {
-      if (token == 0x0) {
+      if (token == address(0)) {
           recipient.transfer(value);
           return;
       }
+
+      IBurnableMintableToken(token).mint(recipient, value);
     }
 
     function signature(bytes32 _hash, uint256 _index) public view returns (bytes) {

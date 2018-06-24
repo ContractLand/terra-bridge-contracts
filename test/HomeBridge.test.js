@@ -1,6 +1,7 @@
 const HomeBridge = artifacts.require("HomeBridge.sol");
 const UpgradeableProxy = artifacts.require("AdminUpgradeabilityProxy.sol");
 const BridgeValidators = artifacts.require("BridgeValidators.sol");
+const HomeToken = artifacts.require("HomeToken.sol");
 
 const Web3Utils = require('web3-utils');
 const {ERROR_MSG, ZERO_ADDRESS} = require('./helpers/setup');
@@ -170,20 +171,47 @@ contract('HomeBridge', async (accounts) => {
       }).should.be.fulfilled
     })
 
-    it('should not transfer native token for token address other than 0x0', async () => {
-      const nonNativeTokenAddress = '0x1111111111111111111111111111111111111111'
+    it('should not transfer token not registered in bridge', async () => {
+      const unregisteredToken = '0x1111111111111111111111111111111111111111'
       const recipient = accounts[5]
       const transactionHash = "0x806335163828a8eda675cff9c84fa6e6c7cf06bb44cc6ec832e42fe789d01415";
-      const recipientBalanceBefore = await web3.eth.getBalance(recipient)
-      const homeBalanceBefore = await web3.eth.getBalance(homeBridge.address)
 
-      await homeBridge.withdraw(nonNativeTokenAddress, recipient, halfEther, transactionHash, {from: authorities[0]})
-
-      await web3.eth.getBalance(recipient).should.be.bignumber.equal(recipientBalanceBefore)
-      await web3.eth.getBalance(homeBridge.address).should.be.bignumber.equal(homeBalanceBefore)
+      await homeBridge.withdraw(unregisteredToken, recipient, halfEther, transactionHash, {from: authorities[0]}).should.be.rejectedWith(ERROR_MSG);
     })
 
-    it('should allow validator to withdraw native token', async () => {
+    it('should allow validator to withdraw token via minting', async () => {
+      const foreignTokenAddress = '0x2222222222222222222222222222222222222222'
+      const homeToken = await HomeToken.new("Home Token", "HTK", 18);
+      const recipient = accounts[5]
+      const value = halfEther
+      const balanceBefore = await homeToken.balanceOf(recipient)
+      const tokenSupplyBefore = await homeToken.totalSupply()
+      const transactionHash = "0x806335163828a8eda675cff9c84fa6e6c7cf06bb44cc6ec832e42fe789d01415";
+
+      await homeToken.transferOwnership(homeBridge.address)
+      await homeBridge.registerToken(foreignTokenAddress, homeToken.address)
+      const {logs} = await homeBridge.withdraw(foreignTokenAddress, recipient, value, transactionHash, {from: authorities[0]}).should.be.fulfilled
+
+      logs[0].event.should.be.equal("SignedForWithdraw");
+      logs[0].args.should.be.deep.equal({
+        signer: authorities[0],
+        transactionHash
+      });
+      logs[1].event.should.be.equal("Withdraw");
+      logs[1].args.should.be.deep.equal({
+        token: homeToken.address,
+        recipient,
+        value,
+        transactionHash
+      })
+
+      const balanceAfter = await homeToken.balanceOf(recipient)
+      const totalSupplyAfter = await homeToken.totalSupply()
+      balanceAfter.should.be.bignumber.equal(balanceBefore.add(value))
+      totalSupplyAfter.should.be.bignumber.equal(tokenSupplyBefore.add(value))
+    })
+
+    it('should allow validator to withdraw native token via trafer', async () => {
       const token = ADDRESS_ZERO
       const recipient = accounts[5]
       const value = halfEther
