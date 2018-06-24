@@ -4,7 +4,6 @@ import "openzeppelin-solidity/contracts/token/ERC20/BurnableToken.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/MintableToken.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/DetailedERC20.sol";
 import "openzeppelin-solidity/contracts/token/ERC827/ERC827Token.sol";
-import "./interfaces/ERC20Token.sol";
 import "./interfaces/IBurnableMintableToken.sol";
 
 contract HomeToken is IBurnableMintableToken, ERC827Token, DetailedERC20, BurnableToken, MintableToken {
@@ -26,7 +25,7 @@ contract HomeToken is IBurnableMintableToken, ERC827Token, DetailedERC20, Burnab
         return;
     }
 
-    ERC20Token token = ERC20Token(_token);
+    DetailedERC20 token = DetailedERC20(_token);
     uint256 balance = token.balanceOf(address(this));
     require(token.transfer(_to, balance));
   }
