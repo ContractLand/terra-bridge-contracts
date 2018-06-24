@@ -31,11 +31,13 @@ library Message {
         }
         return false;
     }
+
     // layout of message :: bytes:
     // offset  0: 32 bytes :: uint256 - message length
-    // offset 32: 20 bytes :: address - recipient address
-    // offset 52: 32 bytes :: uint256 - value
-    // offset 84: 32 bytes :: bytes32 - transaction hash
+    // offset 32: 20 bytes :: address - token address
+    // offset 52: 20 bytes :: address - recipient address
+    // offset 72: 32 bytes :: uint256 - value
+    // offset 104: 32 bytes :: bytes32 - transaction hash
 
     // bytes 1 to 32 are 0 because message length is stored as little endian.
     // mload always reads 32 bytes.
@@ -50,13 +52,14 @@ library Message {
     function parseMessage(bytes message)
         internal
         pure
-        returns(address recipient, uint256 amount, bytes32 txHash)
+        returns(address token, address recipient, uint256 amount, bytes32 txHash)
     {
         require(isMessageValid(message));
         assembly {
-            recipient := and(mload(add(message, 20)), 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
-            amount := mload(add(message, 52))
-            txHash := mload(add(message, 84))
+            token := and(mload(add(message, 20)), 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
+            recipient := and(mload(add(message, 40)), 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
+            amount := mload(add(message, 72))
+            txHash := mload(add(message, 104))
         }
     }
 
@@ -65,7 +68,7 @@ library Message {
     }
 
     function requiredMessageLength() public pure returns(uint256) {
-        return 84;
+        return 104;
     }
 
     function recoverAddressFromSignedMessage(bytes signature, bytes message) internal pure returns (address) {
@@ -85,7 +88,7 @@ library Message {
     function hashMessage(bytes message) internal pure returns (bytes32) {
         bytes memory prefix = "\x19Ethereum Signed Message:\n";
         // message is always 84 length
-        string memory msgLength = "84";
+        string memory msgLength = "104";
         return keccak256(prefix, msgLength, message);
     }
 

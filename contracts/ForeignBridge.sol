@@ -10,7 +10,6 @@ contract ForeignBridge is BasicBridge, Initializable {
     using SafeMath for uint256;
 
     /* Beginning of V1 storage variables */
-    address public erc20tokenAddress;
     uint256 public gasLimitDepositRelay;
     uint256 public gasLimitWithdrawConfirm;
     // mapping between the deposit transaction hash from the HomeBridge to whether the deposit has been processed
@@ -18,14 +17,13 @@ contract ForeignBridge is BasicBridge, Initializable {
     /* End of V1 storage variables */
 
     // Triggered when relay of deposit from HomeBridge is complete
-    event Deposit(address recipient, uint value, bytes32 transactionHash);
+    event Deposit(address token, address recipient, uint value, bytes32 transactionHash);
     // Event created on money withdraw.
-    event Withdraw(address recipient, uint256 value);
+    event Withdraw(address token, address recipient, uint256 value);
     event GasConsumptionLimitsUpdated(uint256 gasLimitDepositRelay, uint256 gasLimitWithdrawConfirm);
 
     function initialize(
         address _validatorContract,
-        address _erc20token,
         uint256 _dailyLimit,
         uint256 _maxPerTx,
         uint256 _minPerTx,
@@ -38,7 +36,6 @@ contract ForeignBridge is BasicBridge, Initializable {
         require(_minPerTx > 0 && _maxPerTx > _minPerTx && _dailyLimit > _maxPerTx);
         require(_foreignGasPrice > 0);
 
-        setErc20token(_erc20token);
         validatorContractAddress = _validatorContract;
         deployedAtBlock = block.number;
         dailyLimit = _dailyLimit;
@@ -48,14 +45,12 @@ contract ForeignBridge is BasicBridge, Initializable {
         requiredBlockConfirmations = _requiredBlockConfirmations;
     }
 
-    function onTokenTransfer(address _from, uint256 _value, bytes /*_data*/) external returns(bool) {
-        require(msg.sender == _from);
+    function onTokenTransfer(address _token, address _receipient, uint256 _value, bytes /*_data*/) external {
         require(withinLimit(_value));
         totalSpentPerDay[getCurrentDay()] = totalSpentPerDay[getCurrentDay()].add(_value);
 
-        require(erc20token().transferFrom(msg.sender, this, _value));
-        emit Withdraw(_from, _value);
-        return true;
+        require(ERC20Token(_token).transferFrom(msg.sender, this, _value));
+        emit Withdraw(_token, _receipient, _value);
     }
 
     function claimTokens(address _token, address _to) external onlyOwner {
@@ -74,10 +69,6 @@ contract ForeignBridge is BasicBridge, Initializable {
         erc677token().claimTokens(_token, _to);
     } */
 
-    function erc20token() public view returns(ERC20Token) {
-        return ERC20Token(erc20tokenAddress);
-    }
-
     function setGasLimits(uint256 _gasLimitDepositRelay, uint256 _gasLimitWithdrawConfirm) external onlyOwner {
         gasLimitDepositRelay = _gasLimitDepositRelay;
         gasLimitWithdrawConfirm = _gasLimitWithdrawConfirm;
@@ -86,19 +77,15 @@ contract ForeignBridge is BasicBridge, Initializable {
 
     function deposit(uint8[] vs, bytes32[] rs, bytes32[] ss, bytes message) external {
         Message.hasEnoughValidSignatures(message, vs, rs, ss, validatorContract());
+        address token;
         address recipient;
         uint256 amount;
         bytes32 txHash;
-        (recipient, amount, txHash) = Message.parseMessage(message);
+        (token, recipient, amount, txHash) = Message.parseMessage(message);
         require(!deposits[txHash]);
         deposits[txHash] = true;
 
-        erc20token().transfer(recipient, amount);
-        emit Deposit(recipient, amount, txHash);
-    }
-
-    function setErc20token(address _token) private {
-        require(_token != address(0));
-        erc20tokenAddress = _token;
+        ERC20Token(token).transfer(recipient, amount);
+        emit Deposit(token, recipient, amount, txHash);
     }
 }
