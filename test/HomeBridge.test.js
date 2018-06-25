@@ -140,63 +140,69 @@ contract('HomeBridge', async (accounts) => {
     })
   })
 
-  describe('#fallback', async () => {
+  describe('#depositNative', async () => {
     beforeEach(async () => {
       homeContract = await HomeBridge.new()
       await homeContract.initialize(validatorContract.address, '3', '2', '1', gasPrice, requireBlockConfirmations)
     })
     it('should accept CLC', async () => {
+      const user = accounts[1]
+      const recipient = accounts[2]
       const currentDay = await homeContract.getCurrentDay()
       '0'.should.be.bignumber.equal(await homeContract.totalSpentPerDay(currentDay))
-      const {logs} = await homeContract.sendTransaction({
-        from: accounts[1],
+      const {logs} = await homeContract.depositNative(recipient, {
+        from: user,
         value: 1
       }).should.be.fulfilled
       '1'.should.be.bignumber.equal(await homeContract.totalSpentPerDay(currentDay))
-      await homeContract.sendTransaction({
-        from: accounts[1],
+      await homeContract.depositNative(recipient, {
+        from: user,
         value: 3
       }).should.be.rejectedWith(ERROR_MSG);
       logs[0].event.should.be.equal('Deposit')
       logs[0].args.should.be.deep.equal({
         token: ADDRESS_ZERO,
-        recipient: accounts[1],
+        recipient: recipient,
         value: new web3.BigNumber(1)
       })
       await homeContract.setDailyLimit(4).should.be.fulfilled;
-      await homeContract.sendTransaction({
-        from: accounts[1],
+      await homeContract.depositNative(recipient, {
+        from: user,
         value: 1
       }).should.be.fulfilled
       '2'.should.be.bignumber.equal(await homeContract.totalSpentPerDay(currentDay))
     })
 
     it('doesnt let you send more than max amount per tx', async () => {
-      await homeContract.sendTransaction({
-        from: accounts[1],
+      const user = accounts[1]
+      const recipient = accounts[2]
+      await homeContract.depositNative(recipient, {
+        from: user,
         value: 1
       }).should.be.fulfilled
-      await homeContract.sendTransaction({
-        from: accounts[1],
+      await homeContract.depositNative(recipient, {
+        from: user,
         value: 3
       }).should.be.rejectedWith(ERROR_MSG)
       await homeContract.setMaxPerTx(100).should.be.rejectedWith(ERROR_MSG);
       await homeContract.setDailyLimit(100).should.be.fulfilled;
       await homeContract.setMaxPerTx(99).should.be.fulfilled;
       //meets max per tx and daily limit
-      await homeContract.sendTransaction({
-        from: accounts[1],
+      await homeContract.depositNative(recipient, {
+        from: user,
         value: 99
       }).should.be.fulfilled
       //above daily limit
-      await homeContract.sendTransaction({
-        from: accounts[1],
+      await homeContract.depositNative(recipient, {
+        from: user,
         value: 1
       }).should.be.rejectedWith(ERROR_MSG)
 
     })
 
     it('should not let to deposit less than minPerTx', async () => {
+      const user = accounts[1]
+      const recipient = accounts[2]
       const newDailyLimit = 100;
       const newMaxPerTx = 50;
       const newMinPerTx = 20;
@@ -204,12 +210,12 @@ contract('HomeBridge', async (accounts) => {
       await homeContract.setMaxPerTx(newMaxPerTx).should.be.fulfilled;
       await homeContract.setMinPerTx(newMinPerTx).should.be.fulfilled;
 
-      await homeContract.sendTransaction({
-        from: accounts[1],
+      await homeContract.depositNative(recipient, {
+        from: user,
         value: newMinPerTx
       }).should.be.fulfilled
-      await homeContract.sendTransaction({
-        from: accounts[1],
+      await homeContract.depositNative(recipient, {
+        from: user,
         value: newMinPerTx - 1
       }).should.be.rejectedWith(ERROR_MSG)
     })
@@ -241,7 +247,7 @@ contract('HomeBridge', async (accounts) => {
     beforeEach(async () => {
       homeBridge = await HomeBridge.new();
       await homeBridge.initialize(validatorContract.address, oneEther, halfEther, minPerTx, gasPrice, requireBlockConfirmations);
-      const {logs} = await homeBridge.sendTransaction({
+      const {logs} = await homeBridge.depositNative(accounts[2], {
         from: accounts[2],
         value: halfEther
       }).should.be.fulfilled
@@ -324,7 +330,7 @@ contract('HomeBridge', async (accounts) => {
       let homeBridgeWithTwoSigs = await HomeBridge.new();
       await homeBridgeWithTwoSigs.initialize(validatorContractWith2Signatures.address, oneEther, halfEther, minPerTx, gasPrice, requireBlockConfirmations);
 
-      await homeBridgeWithTwoSigs.sendTransaction({
+      await homeBridgeWithTwoSigs.depositNative(accounts[2], {
         from: accounts[2],
         value: halfEther
       }).should.be.fulfilled
@@ -399,7 +405,7 @@ contract('HomeBridge', async (accounts) => {
       let homeBridgeWithTwoSigs = await HomeBridge.new();
       await homeBridgeWithTwoSigs.initialize(validatorContractWith2Signatures.address, oneEther, halfEther, minPerTx, gasPrice, requireBlockConfirmations);
 
-      await homeBridgeWithTwoSigs.sendTransaction({
+      await homeBridgeWithTwoSigs.depositNative(accounts[2], {
         from: accounts[2],
         value: halfEther
       }).should.be.fulfilled
