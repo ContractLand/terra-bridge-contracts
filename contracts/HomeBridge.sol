@@ -81,8 +81,8 @@ contract HomeBridge is Initializable, BasicBridge {
         address homeToken = foreignToHomeTokenMap[foreignToken];
         require(foreignToken == address(0) || homeToken != address(0));
 
-        bytes32 hashMsg = keccak256(homeToken, recipient, value, transactionHash);
-        bytes32 hashSender = keccak256(msg.sender, hashMsg);
+        bytes32 hashMsg = keccak256(abi.encodePacked(homeToken, recipient, value, transactionHash));
+        bytes32 hashSender = keccak256(abi.encodePacked(msg.sender, hashMsg));
         // Duplicated deposits
         require(!withdrawalsSigned[hashSender]);
         withdrawalsSigned[hashSender] = true;
@@ -113,7 +113,7 @@ contract HomeBridge is Initializable, BasicBridge {
         require(Message.isMessageValid(message));
         require(msg.sender == Message.recoverAddressFromSignedMessage(signature, message));
         bytes32 hashMsg = keccak256(message);
-        bytes32 hashSender = keccak256(msg.sender, hashMsg);
+        bytes32 hashSender = keccak256(abi.encodePacked(msg.sender, hashMsg));
 
         uint256 signed = numMessagesSigned[hashMsg];
         require(!isAlreadyProcessed(signed));
@@ -127,7 +127,7 @@ contract HomeBridge is Initializable, BasicBridge {
         }
         messagesSigned[hashSender] = true;
 
-        bytes32 signIdx = keccak256(hashMsg, (signed-1));
+        bytes32 signIdx = keccak256(abi.encodePacked(hashMsg, (signed-1)));
         signatures[signIdx] = signature;
 
         numMessagesSigned[hashMsg] = signed;
@@ -159,7 +159,7 @@ contract HomeBridge is Initializable, BasicBridge {
     }
 
     function signature(bytes32 _hash, uint256 _index) public view returns (bytes) {
-        bytes32 signIdx = keccak256(_hash, _index);
+        bytes32 signIdx = keccak256(abi.encodePacked(_hash, _index));
         return signatures[signIdx];
     }
 
