@@ -28,16 +28,17 @@ contract('HomeBridge', async (accounts) => {
     it('sets variables', async () => {
       ZERO_ADDRESS.should.be.equal(await homeContract.validatorContract())
       '0'.should.be.bignumber.equal(await homeContract.deployedAtBlock())
-      '0'.should.be.bignumber.equal(await homeContract.dailyLimit())
-      '0'.should.be.bignumber.equal(await homeContract.maxPerTx())
+      '0'.should.be.bignumber.equal(await homeContract.dailyLimit(ADDRESS_ZERO))
+      '0'.should.be.bignumber.equal(await homeContract.maxPerTx(ADDRESS_ZERO))
+      '0'.should.be.bignumber.equal(await homeContract.minPerTx(ADDRESS_ZERO))
       false.should.be.equal(await homeContract.initialized())
       await homeContract.initialize(validatorContract.address, '3', '2', '1', gasPrice, requireBlockConfirmations).should.be.fulfilled;
       true.should.be.equal(await homeContract.initialized())
       validatorContract.address.should.be.equal(await homeContract.validatorContract());
       (await homeContract.deployedAtBlock()).should.be.bignumber.above(0);
-      '3'.should.be.bignumber.equal(await homeContract.dailyLimit())
-      '2'.should.be.bignumber.equal(await homeContract.maxPerTx())
-      '1'.should.be.bignumber.equal(await homeContract.minPerTx())
+      '3'.should.be.bignumber.equal(await homeContract.dailyLimit(ADDRESS_ZERO))
+      '2'.should.be.bignumber.equal(await homeContract.maxPerTx(ADDRESS_ZERO))
+      '1'.should.be.bignumber.equal(await homeContract.minPerTx(ADDRESS_ZERO))
     })
     it('cant set maxPerTx > dailyLimit', async () => {
       false.should.be.equal(await homeContract.initialized())
@@ -59,9 +60,9 @@ contract('HomeBridge', async (accounts) => {
 
       true.should.be.equal(await upgradedContract.initialized());
       validatorContract.address.should.be.equal(await upgradedContract.validatorContract())
-      "3".should.be.bignumber.equal(await upgradedContract.dailyLimit())
-      "2".should.be.bignumber.equal(await upgradedContract.maxPerTx())
-      "1".should.be.bignumber.equal(await upgradedContract.minPerTx())
+      "3".should.be.bignumber.equal(await upgradedContract.dailyLimit(ADDRESS_ZERO))
+      "2".should.be.bignumber.equal(await upgradedContract.maxPerTx(ADDRESS_ZERO))
+      "1".should.be.bignumber.equal(await upgradedContract.minPerTx(ADDRESS_ZERO))
     })
   })
 
@@ -149,12 +150,12 @@ contract('HomeBridge', async (accounts) => {
       const user = accounts[1]
       const recipient = accounts[2]
       const currentDay = await homeContract.getCurrentDay()
-      '0'.should.be.bignumber.equal(await homeContract.totalSpentPerDay(currentDay))
+      '0'.should.be.bignumber.equal(await homeContract.totalSpentPerDay(ADDRESS_ZERO, currentDay))
       const {logs} = await homeContract.depositNative(recipient, {
         from: user,
         value: 1
       }).should.be.fulfilled
-      '1'.should.be.bignumber.equal(await homeContract.totalSpentPerDay(currentDay))
+      '1'.should.be.bignumber.equal(await homeContract.totalSpentPerDay(ADDRESS_ZERO, currentDay))
       await homeContract.depositNative(recipient, {
         from: user,
         value: 3
@@ -165,12 +166,12 @@ contract('HomeBridge', async (accounts) => {
         recipient: recipient,
         value: new web3.BigNumber(1)
       })
-      await homeContract.setDailyLimit(4).should.be.fulfilled;
+      await homeContract.setDailyLimit(ADDRESS_ZERO, 4).should.be.fulfilled;
       await homeContract.depositNative(recipient, {
         from: user,
         value: 1
       }).should.be.fulfilled
-      '2'.should.be.bignumber.equal(await homeContract.totalSpentPerDay(currentDay))
+      '2'.should.be.bignumber.equal(await homeContract.totalSpentPerDay(ADDRESS_ZERO, currentDay))
     })
 
     it('doesnt let you send more than max amount per tx', async () => {
@@ -184,9 +185,9 @@ contract('HomeBridge', async (accounts) => {
         from: user,
         value: 3
       }).should.be.rejectedWith(ERROR_MSG)
-      await homeContract.setMaxPerTx(100).should.be.rejectedWith(ERROR_MSG);
-      await homeContract.setDailyLimit(100).should.be.fulfilled;
-      await homeContract.setMaxPerTx(99).should.be.fulfilled;
+      await homeContract.setMaxPerTx(ADDRESS_ZERO, 100).should.be.rejectedWith(ERROR_MSG);
+      await homeContract.setDailyLimit(ADDRESS_ZERO, 100).should.be.fulfilled;
+      await homeContract.setMaxPerTx(ADDRESS_ZERO, 99).should.be.fulfilled;
       //meets max per tx and daily limit
       await homeContract.depositNative(recipient, {
         from: user,
@@ -206,9 +207,9 @@ contract('HomeBridge', async (accounts) => {
       const newDailyLimit = 100;
       const newMaxPerTx = 50;
       const newMinPerTx = 20;
-      await homeContract.setDailyLimit(newDailyLimit).should.be.fulfilled;
-      await homeContract.setMaxPerTx(newMaxPerTx).should.be.fulfilled;
-      await homeContract.setMinPerTx(newMinPerTx).should.be.fulfilled;
+      await homeContract.setDailyLimit(ADDRESS_ZERO, newDailyLimit).should.be.fulfilled;
+      await homeContract.setMaxPerTx(ADDRESS_ZERO, newMaxPerTx).should.be.fulfilled;
+      await homeContract.setMinPerTx(ADDRESS_ZERO, newMinPerTx).should.be.fulfilled;
 
       await homeContract.depositNative(recipient, {
         from: user,
@@ -228,17 +229,17 @@ contract('HomeBridge', async (accounts) => {
       await homeContract.initialize(validatorContract.address, '3', '2', '1', gasPrice, requireBlockConfirmations)
     })
     it('#setMaxPerTx allows to set only to owner and cannot be more than daily limit', async () => {
-      await homeContract.setMaxPerTx(2, {from: authorities[0]}).should.be.rejectedWith(ERROR_MSG);
-      await homeContract.setMaxPerTx(2, {from: owner}).should.be.fulfilled;
+      await homeContract.setMaxPerTx(ADDRESS_ZERO, 2, {from: authorities[0]}).should.be.rejectedWith(ERROR_MSG);
+      await homeContract.setMaxPerTx(ADDRESS_ZERO, 2, {from: owner}).should.be.fulfilled;
 
-      await homeContract.setMaxPerTx(3, {from: owner}).should.be.rejectedWith(ERROR_MSG);
+      await homeContract.setMaxPerTx(ADDRESS_ZERO, 3, {from: owner}).should.be.rejectedWith(ERROR_MSG);
     })
 
     it('#setMinPerTx allows to set only to owner and cannot be more than daily limit and should be less than maxPerTx', async () => {
-      await homeContract.setMinPerTx(1, {from: authorities[0]}).should.be.rejectedWith(ERROR_MSG);
-      await homeContract.setMinPerTx(1, {from: owner}).should.be.fulfilled;
+      await homeContract.setMinPerTx(ADDRESS_ZERO, 1, {from: authorities[0]}).should.be.rejectedWith(ERROR_MSG);
+      await homeContract.setMinPerTx(ADDRESS_ZERO, 1, {from: owner}).should.be.fulfilled;
 
-      await homeContract.setMinPerTx(2, {from: owner}).should.be.rejectedWith(ERROR_MSG);
+      await homeContract.setMinPerTx(ADDRESS_ZERO, 2, {from: owner}).should.be.rejectedWith(ERROR_MSG);
     })
 
     it('#registerToken can only be called by owner, cannot override existing mapping, and cannot register 0x0', async () => {

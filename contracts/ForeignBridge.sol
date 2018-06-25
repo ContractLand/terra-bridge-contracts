@@ -38,42 +38,24 @@ contract ForeignBridge is BasicBridge, Initializable {
 
         validatorContractAddress = _validatorContract;
         deployedAtBlock = block.number;
-        dailyLimit = _dailyLimit;
-        maxPerTx = _maxPerTx;
-        minPerTx = _minPerTx;
+        dailyLimit[address(0)] = _dailyLimit;
+        maxPerTx[address(0)] = _maxPerTx;
+        minPerTx[address(0)] = _minPerTx;
         gasPrice = _foreignGasPrice;
         requiredBlockConfirmations = _requiredBlockConfirmations;
     }
 
-    // TODO: add limits
     function withdrawNative(address _recipient) public payable {
+        // TODO: add limits
         emit Withdraw(address(0), _recipient, msg.value);
     }
 
     function withdrawToken(address _token, address _recipient, uint256 _value, bytes /*_data*/) external {
-        require(withinLimit(_value));
-        totalSpentPerDay[getCurrentDay()] = totalSpentPerDay[getCurrentDay()].add(_value);
+        require(withinLimit(_token, _value));
+        totalSpentPerDay[_token][getCurrentDay()] = totalSpentPerDay[_token][getCurrentDay()].add(_value);
 
         require(ERC20Token(_token).transferFrom(msg.sender, this, _value));
         emit Withdraw(_token, _recipient, _value);
-    }
-
-    function claimTokens(address _token, address _to) external onlyOwner {
-        require(_to != address(0));
-        if (_token == address(0)) {
-            _to.transfer(address(this).balance);
-            return;
-        }
-
-        ERC20Token token = ERC20Token(_token);
-        uint256 balance = token.balanceOf(this);
-        require(token.transfer(_to, balance));
-    }
-
-    function setGasLimits(uint256 _gasLimitDepositRelay, uint256 _gasLimitWithdrawConfirm) external onlyOwner {
-        gasLimitDepositRelay = _gasLimitDepositRelay;
-        gasLimitWithdrawConfirm = _gasLimitWithdrawConfirm;
-        emit GasConsumptionLimitsUpdated(gasLimitDepositRelay, gasLimitWithdrawConfirm);
     }
 
     function deposit(uint8[] vs, bytes32[] rs, bytes32[] ss, bytes message) external {
@@ -98,5 +80,23 @@ contract ForeignBridge is BasicBridge, Initializable {
 
         ERC20Token token = ERC20Token(tokenAddress);
         require(token.transfer(recipient, amount));
+    }
+
+    function claimTokens(address _token, address _to) external onlyOwner {
+        require(_to != address(0));
+        if (_token == address(0)) {
+            _to.transfer(address(this).balance);
+            return;
+        }
+
+        ERC20Token token = ERC20Token(_token);
+        uint256 balance = token.balanceOf(this);
+        require(token.transfer(_to, balance));
+    }
+
+    function setGasLimits(uint256 _gasLimitDepositRelay, uint256 _gasLimitWithdrawConfirm) external onlyOwner {
+        gasLimitDepositRelay = _gasLimitDepositRelay;
+        gasLimitWithdrawConfirm = _gasLimitWithdrawConfirm;
+        emit GasConsumptionLimitsUpdated(gasLimitDepositRelay, gasLimitWithdrawConfirm);
     }
 }

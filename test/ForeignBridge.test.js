@@ -43,28 +43,28 @@ contract('ForeignBridge', async (accounts) => {
 
       ZERO_ADDRESS.should.be.equal(await foreignBridge.validatorContract())
       '0'.should.be.bignumber.equal(await foreignBridge.deployedAtBlock())
-      '0'.should.be.bignumber.equal(await foreignBridge.dailyLimit())
-      '0'.should.be.bignumber.equal(await foreignBridge.maxPerTx())
+      '0'.should.be.bignumber.equal(await foreignBridge.dailyLimit(ADDRESS_ZERO))
+      '0'.should.be.bignumber.equal(await foreignBridge.maxPerTx(ADDRESS_ZERO))
+      '0'.should.be.bignumber.equal(await foreignBridge.minPerTx(ADDRESS_ZERO))
       false.should.be.equal(await foreignBridge.initialized())
       await foreignBridge.initialize(validatorContract.address, oneEther, halfEther, minPerTx, gasPrice, requireBlockConfirmations);
 
       true.should.be.equal(await foreignBridge.initialized())
       validatorContract.address.should.be.equal(await foreignBridge.validatorContract());
       (await foreignBridge.deployedAtBlock()).should.be.bignumber.above(0);
-      oneEther.should.be.bignumber.equal(await foreignBridge.dailyLimit())
-      halfEther.should.be.bignumber.equal(await foreignBridge.maxPerTx())
-      minPerTx.should.be.bignumber.equal(await foreignBridge.minPerTx())
+      oneEther.should.be.bignumber.equal(await foreignBridge.dailyLimit(ADDRESS_ZERO))
+      halfEther.should.be.bignumber.equal(await foreignBridge.maxPerTx(ADDRESS_ZERO))
+      minPerTx.should.be.bignumber.equal(await foreignBridge.minPerTx(ADDRESS_ZERO))
     })
   })
 
   describe('#deposit', async () => {
     beforeEach(async () => {
       foreignBridge = await ForeignBridge.new()
-      erc20token = await StandardERC20Token.new('Test', 'TST', web3.toWei(1, "ether"));
-      const oneEther = web3.toBigNumber(web3.toWei(1, "ether"));
-      const halfEther = web3.toBigNumber(web3.toWei(0.5, "ether"));
-      await foreignBridge.initialize(validatorContract.address, oneEther, halfEther, minPerTx, gasPrice, requireBlockConfirmations);
-      oneEther.should.be.bignumber.equal(await foreignBridge.dailyLimit());
+      erc20token = await StandardERC20Token.new('Test', 'TST', web3.toWei(1, "ether"))
+      const oneEther = web3.toBigNumber(web3.toWei(1, "ether"))
+      const halfEther = web3.toBigNumber(web3.toWei(0.5, "ether"))
+      await foreignBridge.initialize(validatorContract.address, oneEther, halfEther, minPerTx, gasPrice, requireBlockConfirmations)
     })
 
     it('should allow deposit of ether', async () => {
@@ -257,6 +257,13 @@ contract('ForeignBridge', async (accounts) => {
       erc20token = await StandardERC20Token.new('Test', 'TST', web3.toWei(10, "ether"));
       foreignBridge = await ForeignBridge.new();
       await foreignBridge.initialize(validatorContract.address, oneEther, halfEther, minPerTx, gasPrice, requireBlockConfirmations);
+      // Set limits for token
+      foreignBridge.setDailyLimit(erc20token.address, oneEther).should.be.fulfilled
+      foreignBridge.setMaxPerTx(erc20token.address, halfEther).should.be.fulfilled
+      foreignBridge.setMinPerTx(erc20token.address, minPerTx).should.be.fulfilled
+
+      oneEther.should.be.bignumber.equal(await foreignBridge.dailyLimit(ADDRESS_ZERO))
+      oneEther.should.be.bignumber.equal(await foreignBridge.dailyLimit(erc20token.address))
     })
 
     it('should not allow transfer if user does not give allowance', async () => {
@@ -321,17 +328,17 @@ contract('ForeignBridge', async (accounts) => {
     })
 
     it('#setMaxPerTx allows to set only to owner and cannot be more than daily limit', async () => {
-      await foreignBridge.setMaxPerTx(halfEther, {from: authorities[0]}).should.be.rejectedWith(ERROR_MSG);
-      await foreignBridge.setMaxPerTx(halfEther, {from: owner}).should.be.fulfilled;
+      await foreignBridge.setMaxPerTx(ADDRESS_ZERO, halfEther, {from: authorities[0]}).should.be.rejectedWith(ERROR_MSG);
+      await foreignBridge.setMaxPerTx(ADDRESS_ZERO, halfEther, {from: owner}).should.be.fulfilled;
 
-      await foreignBridge.setMaxPerTx(oneEther, {from: owner}).should.be.rejectedWith(ERROR_MSG);
+      await foreignBridge.setMaxPerTx(ADDRESS_ZERO, oneEther, {from: owner}).should.be.rejectedWith(ERROR_MSG);
     })
 
     it('#setMinPerTx allows to set only to owner and cannot be more than daily limit and should be less than maxPerTx', async () => {
-      await foreignBridge.setMinPerTx(minPerTx, {from: authorities[0]}).should.be.rejectedWith(ERROR_MSG);
-      await foreignBridge.setMinPerTx(minPerTx, {from: owner}).should.be.fulfilled;
+      await foreignBridge.setMinPerTx(ADDRESS_ZERO, minPerTx, {from: authorities[0]}).should.be.rejectedWith(ERROR_MSG);
+      await foreignBridge.setMinPerTx(ADDRESS_ZERO, minPerTx, {from: owner}).should.be.fulfilled;
 
-      await foreignBridge.setMinPerTx(oneEther, {from: owner}).should.be.rejectedWith(ERROR_MSG);
+      await foreignBridge.setMinPerTx(ADDRESS_ZERO, oneEther, {from: owner}).should.be.rejectedWith(ERROR_MSG);
     })
   })
 
@@ -356,9 +363,9 @@ contract('ForeignBridge', async (accounts) => {
 
       true.should.be.equal(await upgradedContract.initialized());
       fakeValidatorsAddress.should.be.equal(await upgradedContract.validatorContract())
-      FOREIGN_DAILY_LIMIT.should.be.bignumber.equal(await upgradedContract.dailyLimit())
-      FOREIGN_MAX_AMOUNT_PER_TX.should.be.bignumber.equal(await upgradedContract.maxPerTx())
-      FOREIGN_MIN_AMOUNT_PER_TX.should.be.bignumber.equal(await upgradedContract.minPerTx())
+      FOREIGN_DAILY_LIMIT.should.be.bignumber.equal(await upgradedContract.dailyLimit(ADDRESS_ZERO))
+      FOREIGN_MAX_AMOUNT_PER_TX.should.be.bignumber.equal(await upgradedContract.maxPerTx(ADDRESS_ZERO))
+      FOREIGN_MIN_AMOUNT_PER_TX.should.be.bignumber.equal(await upgradedContract.minPerTx(ADDRESS_ZERO))
     })
   })
 

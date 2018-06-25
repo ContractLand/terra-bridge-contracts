@@ -11,15 +11,15 @@ contract BasicBridge {
     uint256 public gasPrice;
     uint256 public requiredBlockConfirmations;
     uint256 public deployedAtBlock;
-    uint256 public minPerTx;
-    uint256 public maxPerTx; // Set to 0 to disable
-    uint256 public dailyLimit; // Set to 0 to disable
-    mapping(uint256 => uint256) public totalSpentPerDay;
+    mapping(address => uint256) public minPerTx;
+    mapping(address => uint256) public maxPerTx; // Set to 0 to disable
+    mapping(address => uint256) public dailyLimit; // Set to 0 to disable
+    mapping(address => mapping(uint256 => uint256)) public totalSpentPerDay;
     /* End of V1 storage variables */
 
     event GasPriceChanged(uint256 gasPrice);
     event RequiredBlockConfirmationChanged(uint256 requiredBlockConfirmations);
-    event DailyLimit(uint256 newLimit);
+    event DailyLimit(address token, uint256 newLimit);
 
     function validatorContract() public view returns(IBridgeValidators) {
         return IBridgeValidators(validatorContractAddress);
@@ -50,25 +50,25 @@ contract BasicBridge {
     function getCurrentDay() public view returns(uint256) {
         return now / 1 days;
     }
-
-    function setDailyLimit(uint256 _dailyLimit) public onlyOwner {
-        dailyLimit = _dailyLimit;
-        emit DailyLimit(_dailyLimit);
+    
+    function setDailyLimit(address token, uint256 _dailyLimit) public onlyOwner {
+        dailyLimit[token] = _dailyLimit;
+        emit DailyLimit(token, _dailyLimit);
     }
 
-    function setMaxPerTx(uint256 _maxPerTx) external onlyOwner {
-        require(_maxPerTx < dailyLimit);
-        maxPerTx = _maxPerTx;
+    function setMaxPerTx(address token, uint256 _maxPerTx) external onlyOwner {
+        require(_maxPerTx < dailyLimit[token]);
+        maxPerTx[token] = _maxPerTx;
     }
 
-    function setMinPerTx(uint256 _minPerTx) external onlyOwner {
-        require(_minPerTx < dailyLimit && _minPerTx < maxPerTx);
-        minPerTx = _minPerTx;
+    function setMinPerTx(address token, uint256 _minPerTx) external onlyOwner {
+        require(_minPerTx < dailyLimit[token] && _minPerTx < maxPerTx[token]);
+        minPerTx[token] = _minPerTx;
     }
 
-    function withinLimit(uint256 _amount) public view returns(bool) {
-        uint256 nextLimit = totalSpentPerDay[getCurrentDay()].add(_amount);
-        return dailyLimit >= nextLimit && _amount <= maxPerTx && _amount >= minPerTx;
+    function withinLimit(address token, uint256 _amount) public view returns(bool) {
+        uint256 nextLimit = totalSpentPerDay[token][getCurrentDay()].add(_amount);
+        return dailyLimit[token] >= nextLimit && _amount <= maxPerTx[token] && _amount >= minPerTx[token];
     }
 
     function requiredSignatures() public view returns(uint256) {

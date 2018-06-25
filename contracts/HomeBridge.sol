@@ -53,22 +53,22 @@ contract HomeBridge is Initializable, BasicBridge {
 
         validatorContractAddress = _validatorContract;
         deployedAtBlock = block.number;
-        dailyLimit = _dailyLimit;
-        maxPerTx = _maxPerTx;
-        minPerTx = _minPerTx;
+        dailyLimit[address(0)] = _dailyLimit;
+        maxPerTx[address(0)] = _maxPerTx;
+        minPerTx[address(0)] = _minPerTx;
         gasPrice = _homeGasPrice;
         requiredBlockConfirmations = _requiredBlockConfirmations;
     }
 
     function depositNative(address recipient) public payable {
         require(msg.value > 0);
-        require(withinLimit(msg.value));
-        totalSpentPerDay[getCurrentDay()] = totalSpentPerDay[getCurrentDay()].add(msg.value);
+        require(withinLimit(address(0), msg.value));
+        totalSpentPerDay[address(0)][getCurrentDay()] = totalSpentPerDay[address(0)][getCurrentDay()].add(msg.value);
         emit Deposit(address(0), recipient, msg.value);
     }
 
-    // TODO: add limits
     function depositToken(address homeToken, address recipient, uint256 value) public {
+        // TODO: Add limits
         require(value > 0);
 
         address foreignToken = homeToForeignTokenMap[homeToken];
