@@ -13,6 +13,8 @@ contract HomeBridge is Initializable, BasicBridge {
 
     // mapping between foreign token addresses to home token addresses
     mapping(address => address) public foreignToHomeTokenMap;
+    // mapping between home token addresses to foreign token addresses
+    mapping(address => address) public homeToForeignTokenMap;
     // mapping between message hash and deposit message. Message is the hash of (recipientAccount, depositValue, transactionHash)
     mapping(bytes32 => bytes) public messages;
     // mapping between hash of (deposit message hash, validator index) to the validator signature
@@ -64,6 +66,16 @@ contract HomeBridge is Initializable, BasicBridge {
         require(withinLimit(msg.value));
         totalSpentPerDay[getCurrentDay()] = totalSpentPerDay[getCurrentDay()].add(msg.value);
         emit Deposit(address(0), msg.sender, msg.value);
+    }
+
+    function depositToken(address homeToken, address recipient, uint256 value) public {
+        require(value > 0);
+
+        address foreignToken = homeToForeignTokenMap[homeToken];
+        require(homeToForeignTokenMap[homeToken] != address(0));
+
+        IBurnableMintableToken(homeToken).burn(value);
+        emit Deposit(foreignToken, recipient, value);
     }
 
     function withdraw(address foreignToken, address recipient, uint256 value, bytes32 transactionHash) external onlyValidator {
@@ -133,6 +145,7 @@ contract HomeBridge is Initializable, BasicBridge {
     // TODO: make this onlyOwner
     function registerToken(address foreignAddress, address homeAddress) public {
       foreignToHomeTokenMap[foreignAddress] = homeAddress;
+      homeToForeignTokenMap[homeAddress] = foreignAddress;
     }
 
     function performWithdraw(address token, address recipient, uint256 value) private {

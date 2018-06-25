@@ -65,7 +65,82 @@ contract('HomeBridge', async (accounts) => {
     })
   })
 
-  describe.only('#fallback', async () => {
+  describe('#tokenDeposit', async () => {
+    beforeEach(async () => {
+      homeBridge = await HomeBridge.new()
+      await homeBridge.initialize(validatorContract.address, '3', '2', '1', gasPrice, requireBlockConfirmations)
+    })
+    it('should not accept un-registered tokens', async() => {
+      const owner = accounts[0]
+      const user = accounts[1]
+      const recipient = accounts[2]
+      const amount = 1
+      const homeToken = await HomeToken.new('Home Token', 'HTK', 18)
+      const tokenTransferCall = homeBridge.contract.depositToken.getData(homeToken.address, recipient, amount)
+
+      await homeToken.mint(user, amount, {from: owner }).should.be.fulfilled
+      await homeToken.transferAndCall(homeBridge.address, amount, tokenTransferCall, {from: user}).should.be.rejectedWith(ERROR_MSG)
+    })
+
+    it('should not allow deposit in value less or equal to 0', async() => {
+      const owner = accounts[0]
+      const user = accounts[1]
+      const recipient = accounts[2]
+      const foreignTokenAddress = '0x2222222222222222222222222222222222222222'
+      const amount = 0
+      const homeToken = await HomeToken.new('Home Token', 'HTK', 18)
+      const tokenTransferCall = homeBridge.contract.depositToken.getData(homeToken.address, recipient, amount)
+
+      await homeToken.mint(user, amount, {from: owner }).should.be.fulfilled
+      await homeBridge.registerToken(foreignTokenAddress, homeToken.address).should.be.fulfilled
+      await homeToken.transferAndCall(homeBridge.address, amount, tokenTransferCall, {from: user}).should.be.rejectedWith(ERROR_MSG)
+    })
+
+    it('should burn token on successful deposit', async () => {
+      const owner = accounts[0]
+      const user = accounts[1]
+      const recipient = accounts[2]
+      const foreignTokenAddress = '0x2222222222222222222222222222222222222222'
+      const depositAmount = 1
+      const homeToken = await HomeToken.new('Home Token', 'HTK', 18)
+      const tokenTransferCall = homeBridge.contract.depositToken.getData(homeToken.address, recipient, depositAmount)
+
+      await homeToken.mint(user, depositAmount, {from: owner }).should.be.fulfilled
+      const userBalanceBefore = await homeToken.balanceOf(user)
+      const bridgeBalanceBefore = await homeToken.balanceOf(homeBridge.address)
+      const totalSupplyBefore = await homeToken.totalSupply()
+
+      await homeBridge.registerToken(foreignTokenAddress, homeToken.address).should.be.fulfilled
+      await homeToken.transferAndCall(homeBridge.address, depositAmount, tokenTransferCall, {from: user}).should.be.fulfilled
+
+      userBalanceBefore.minus(depositAmount).should.be.bignumber.equal(await homeToken.balanceOf(user))
+      bridgeBalanceBefore.should.be.bignumber.equal(await homeToken.balanceOf(homeBridge.address))
+      totalSupplyBefore.minus(depositAmount).should.be.bignumber.equal(await homeToken.totalSupply())
+    })
+
+    it('should emit deposit event on successful deposit', async () => {
+      const owner = accounts[0]
+      const user = accounts[1]
+      const recipient = accounts[2]
+      const foreignTokenAddress = '0x2222222222222222222222222222222222222222'
+      const depositAmount = 1
+      const homeToken = await HomeToken.new('Home Token', 'HTK', 18)
+
+      await homeToken.mint(user, depositAmount, {from: owner }).should.be.fulfilled
+      await homeToken.transfer(homeBridge.address, depositAmount, {from: user }).should.be.fulfilled
+      await homeBridge.registerToken(foreignTokenAddress, homeToken.address).should.be.fulfilled
+      const {logs} = await homeBridge.depositToken(homeToken.address, recipient, depositAmount, {from: user}).should.be.fulfilled
+
+      logs[0].event.should.be.equal('Deposit')
+      logs[0].args.should.be.deep.equal({
+        token: foreignTokenAddress,
+        recipient,
+        value: new web3.BigNumber(depositAmount)
+      })
+    })
+  })
+
+  describe('#fallback', async () => {
     beforeEach(async () => {
       homeContract = await HomeBridge.new()
       await homeContract.initialize(validatorContract.address, '3', '2', '1', gasPrice, requireBlockConfirmations)
