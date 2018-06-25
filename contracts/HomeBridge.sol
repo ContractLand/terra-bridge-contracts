@@ -143,6 +143,8 @@ contract HomeBridge is Initializable, BasicBridge {
     }
 
     function registerToken(address foreignAddress, address homeAddress) public onlyOwner {
+        // Do not allow registering of address zero, as the mapping of 0 => 0 is used for native token transfer
+        require(foreignAddress != address(0) && homeAddress != address(0));
         require(foreignToHomeTokenMap[foreignAddress] == address(0) && homeToForeignTokenMap[homeAddress] == address(0));
         foreignToHomeTokenMap[foreignAddress] = homeAddress;
         homeToForeignTokenMap[homeAddress] = foreignAddress;
