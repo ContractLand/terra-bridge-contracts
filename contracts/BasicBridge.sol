@@ -12,8 +12,8 @@ contract BasicBridge {
     uint256 public requiredBlockConfirmations;
     uint256 public deployedAtBlock;
     uint256 public minPerTx;
-    uint256 public maxPerTx;
-    uint256 public dailyLimit;
+    uint256 public maxPerTx; // Set to 0 to disable
+    uint256 public dailyLimit; // Set to 0 to disable
     mapping(uint256 => uint256) public totalSpentPerDay;
     /* End of V1 storage variables */
 

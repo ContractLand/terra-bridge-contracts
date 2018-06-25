@@ -60,6 +60,7 @@ contract HomeBridge is Initializable, BasicBridge {
         requiredBlockConfirmations = _requiredBlockConfirmations;
     }
 
+    // TODO: rename to depositNative, and accepts recipient address
     function () public payable {
         require(msg.value > 0);
         require(msg.data.length == 0);
