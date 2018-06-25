@@ -51,7 +51,7 @@ contract ForeignBridge is BasicBridge, Initializable {
     }
 
     // TODO: Rename to withdrawToken
-    function onTokenTransfer(address _token, address _recipient, uint256 _value, bytes /*_data*/) external {
+    function withdrawToken(address _token, address _recipient, uint256 _value, bytes /*_data*/) external {
         require(withinLimit(_value));
         totalSpentPerDay[getCurrentDay()] = totalSpentPerDay[getCurrentDay()].add(_value);
 

@@ -251,7 +251,7 @@ contract('ForeignBridge', async (accounts) => {
     })
   })
 
-  describe('#onTokenTransfer', async () => {
+  describe('#withdrawToken', async () => {
     beforeEach(async () => {
       user = accounts[4]
       erc20token = await StandardERC20Token.new('Test', 'TST', web3.toWei(10, "ether"));
@@ -260,14 +260,14 @@ contract('ForeignBridge', async (accounts) => {
     })
 
     it('should not allow transfer if user does not give allowance', async () => {
-      await foreignBridge.onTokenTransfer(erc20token.address, user, halfEther, '0x00', {from: user}).should.be.rejectedWith(ERROR_MSG);
+      await foreignBridge.withdrawToken(erc20token.address, user, halfEther, '0x00', {from: user}).should.be.rejectedWith(ERROR_MSG);
     })
 
     it('should only allow user to transfer tokens for themselves', async ()=> {
       await erc20token.transfer(user, halfEther)
       await erc20token.approve(foreignBridge.address, halfEther, {from: user})
-      await foreignBridge.onTokenTransfer(erc20token.address, user, halfEther, '0x00', {from: owner}).should.be.rejectedWith(ERROR_MSG);
-      await foreignBridge.onTokenTransfer(erc20token.address, user, halfEther, '0x00', {from: user}).should.be.fulfilled;
+      await foreignBridge.withdrawToken(erc20token.address, user, halfEther, '0x00', {from: owner}).should.be.rejectedWith(ERROR_MSG);
+      await foreignBridge.withdrawToken(erc20token.address, user, halfEther, '0x00', {from: user}).should.be.fulfilled;
       '0'.should.be.bignumber.equal(await erc20token.balanceOf(user));
       const events = await getEvents(foreignBridge, {event: 'Withdraw'});
       events[0].args.should.be.deep.equal({
@@ -283,19 +283,19 @@ contract('ForeignBridge', async (accounts) => {
       await erc20token.approve(foreignBridge.address, oneEther.add(1), {from: user})
 
       // over maxPerTx
-      await foreignBridge.onTokenTransfer(erc20token.address, user, valueMoreThanLimit, '0x00', {from: user}).should.be.rejectedWith(ERROR_MSG);
+      await foreignBridge.withdrawToken(erc20token.address, user, valueMoreThanLimit, '0x00', {from: user}).should.be.rejectedWith(ERROR_MSG);
       oneEther.add(1).should.be.bignumber.equal(await erc20token.balanceOf(user));
 
       // within maxPerTx
-      await foreignBridge.onTokenTransfer(erc20token.address, user, halfEther, '0x00', {from: user}).should.be.fulfilled
+      await foreignBridge.withdrawToken(erc20token.address, user, halfEther, '0x00', {from: user}).should.be.fulfilled
       halfEther.add(1).should.be.bignumber.equal(await erc20token.balanceOf(user));
 
       // within maxPerTx
-      await foreignBridge.onTokenTransfer(erc20token.address, user, halfEther, '0x00', {from: user}).should.be.fulfilled
+      await foreignBridge.withdrawToken(erc20token.address, user, halfEther, '0x00', {from: user}).should.be.fulfilled
       '1'.should.be.bignumber.equal(await erc20token.balanceOf(user));
 
       // maxPerTx full
-      await foreignBridge.onTokenTransfer(erc20token.address, user, '1', '0x00', {from: user}).should.be.rejectedWith(ERROR_MSG);
+      await foreignBridge.withdrawToken(erc20token.address, user, '1', '0x00', {from: user}).should.be.rejectedWith(ERROR_MSG);
     })
 
     it('should not let to withdraw less than minPerTx', async () => {
@@ -304,11 +304,11 @@ contract('ForeignBridge', async (accounts) => {
       await erc20token.approve(foreignBridge.address, oneEther, {from: user})
 
       // under minPerTx
-      await foreignBridge.onTokenTransfer(erc20token.address, user, valueLessThanMinPerTx, '0x00', {from: user}).should.be.rejectedWith(ERROR_MSG);
+      await foreignBridge.withdrawToken(erc20token.address, user, valueLessThanMinPerTx, '0x00', {from: user}).should.be.rejectedWith(ERROR_MSG);
       oneEther.should.be.bignumber.equal(await erc20token.balanceOf(user));
 
       // equal to minPerTx
-      await foreignBridge.onTokenTransfer(erc20token.address, user, minPerTx, '0x00', {from: user}).should.be.fulfilled;
+      await foreignBridge.withdrawToken(erc20token.address, user, minPerTx, '0x00', {from: user}).should.be.fulfilled;
       oneEther.sub(minPerTx).should.be.bignumber.equal(await erc20token.balanceOf(user));
     })
   })
