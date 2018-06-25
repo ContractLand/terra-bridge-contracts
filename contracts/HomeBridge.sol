@@ -28,7 +28,7 @@ contract HomeBridge is Initializable, BasicBridge {
 
     /* End of V1 storage variables */
 
-    event Deposit (address recipient, uint256 value);
+    event Deposit (address token, address recipient, uint256 value);
     event Withdraw (address token, address recipient, uint256 value, bytes32 transactionHash);
     event SignedForDeposit(address indexed signer, bytes32 messageHash);
     event SignedForWithdraw(address indexed signer, bytes32 transactionHash);
@@ -63,7 +63,7 @@ contract HomeBridge is Initializable, BasicBridge {
         require(msg.data.length == 0);
         require(withinLimit(msg.value));
         totalSpentPerDay[getCurrentDay()] = totalSpentPerDay[getCurrentDay()].add(msg.value);
-        emit Deposit(msg.sender, msg.value);
+        emit Deposit(address(0), msg.sender, msg.value);
     }
 
     function withdraw(address foreignToken, address recipient, uint256 value, bytes32 transactionHash) external onlyValidator {

@@ -65,12 +65,12 @@ contract('HomeBridge', async (accounts) => {
     })
   })
 
-  describe('#fallback', async () => {
+  describe.only('#fallback', async () => {
     beforeEach(async () => {
       homeContract = await HomeBridge.new()
       await homeContract.initialize(validatorContract.address, '3', '2', '1', gasPrice, requireBlockConfirmations)
     })
-    it('should accept POA', async () => {
+    it('should accept CLC', async () => {
       const currentDay = await homeContract.getCurrentDay()
       '0'.should.be.bignumber.equal(await homeContract.totalSpentPerDay(currentDay))
       const {logs} = await homeContract.sendTransaction({
@@ -84,6 +84,7 @@ contract('HomeBridge', async (accounts) => {
       }).should.be.rejectedWith(ERROR_MSG);
       logs[0].event.should.be.equal('Deposit')
       logs[0].args.should.be.deep.equal({
+        token: ADDRESS_ZERO,
         recipient: accounts[1],
         value: new web3.BigNumber(1)
       })
