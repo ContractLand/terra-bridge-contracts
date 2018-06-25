@@ -66,34 +66,28 @@ contract('HomeBridge', async (accounts) => {
     })
   })
 
-  describe('#tokenDeposit', async () => {
+  describe('#depositToken', async () => {
+    let homeToken
+    let dailyLimit = new web3.BigNumber(3)
+    let maxPerTx = new web3.BigNumber(2)
+    let minPerTx = new web3.BigNumber(1)
     beforeEach(async () => {
       homeBridge = await HomeBridge.new()
-      await homeBridge.initialize(validatorContract.address, '3', '2', '1', gasPrice, requireBlockConfirmations)
+      homeToken = await HomeToken.new('Home Token', 'HTK', 18)
+      await homeBridge.initialize(validatorContract.address, dailyLimit, maxPerTx, minPerTx, gasPrice, requireBlockConfirmations)
+      await homeBridge.setDailyLimit(homeToken.address, dailyLimit)
+      await homeBridge.setMaxPerTx(homeToken.address, maxPerTx)
+      await homeBridge.setMinPerTx(homeToken.address, minPerTx)
     })
     it('should not accept un-registered tokens', async() => {
       const owner = accounts[0]
       const user = accounts[1]
       const recipient = accounts[2]
       const amount = 1
-      const homeToken = await HomeToken.new('Home Token', 'HTK', 18)
+
       const tokenTransferCall = homeBridge.contract.depositToken.getData(homeToken.address, recipient, amount)
 
       await homeToken.mint(user, amount, {from: owner }).should.be.fulfilled
-      await homeToken.transferAndCall(homeBridge.address, amount, tokenTransferCall, {from: user}).should.be.rejectedWith(ERROR_MSG)
-    })
-
-    it('should not allow deposit in value less or equal to 0', async() => {
-      const owner = accounts[0]
-      const user = accounts[1]
-      const recipient = accounts[2]
-      const foreignTokenAddress = '0x2222222222222222222222222222222222222222'
-      const amount = 0
-      const homeToken = await HomeToken.new('Home Token', 'HTK', 18)
-      const tokenTransferCall = homeBridge.contract.depositToken.getData(homeToken.address, recipient, amount)
-
-      await homeToken.mint(user, amount, {from: owner }).should.be.fulfilled
-      await homeBridge.registerToken(foreignTokenAddress, homeToken.address).should.be.fulfilled
       await homeToken.transferAndCall(homeBridge.address, amount, tokenTransferCall, {from: user}).should.be.rejectedWith(ERROR_MSG)
     })
 
@@ -103,7 +97,6 @@ contract('HomeBridge', async (accounts) => {
       const recipient = accounts[2]
       const foreignTokenAddress = '0x2222222222222222222222222222222222222222'
       const depositAmount = 1
-      const homeToken = await HomeToken.new('Home Token', 'HTK', 18)
       const tokenTransferCall = homeBridge.contract.depositToken.getData(homeToken.address, recipient, depositAmount)
 
       await homeToken.mint(user, depositAmount, {from: owner }).should.be.fulfilled
@@ -125,7 +118,6 @@ contract('HomeBridge', async (accounts) => {
       const recipient = accounts[2]
       const foreignTokenAddress = '0x2222222222222222222222222222222222222222'
       const depositAmount = 1
-      const homeToken = await HomeToken.new('Home Token', 'HTK', 18)
 
       await homeToken.mint(user, depositAmount, {from: owner }).should.be.fulfilled
       await homeToken.transfer(homeBridge.address, depositAmount, {from: user }).should.be.fulfilled
@@ -138,6 +130,45 @@ contract('HomeBridge', async (accounts) => {
         recipient,
         value: new web3.BigNumber(depositAmount)
       })
+    })
+
+    it('should not allow deposit over maxPerTx', async() => {
+      const owner = accounts[0]
+      const user = accounts[1]
+      const recipient = accounts[2]
+      const foreignTokenAddress = '0x2222222222222222222222222222222222222222'
+      const overMaxPerTx = maxPerTx.plus(1)
+      const tokenTransferCall = homeBridge.contract.depositToken.getData(homeToken.address, recipient, overMaxPerTx)
+
+      await homeToken.mint(user, overMaxPerTx, {from: owner }).should.be.fulfilled
+      await homeBridge.registerToken(foreignTokenAddress, homeToken.address).should.be.fulfilled
+      await homeToken.transferAndCall(homeBridge.address, overMaxPerTx, tokenTransferCall, {from: user}).should.be.rejectedWith(ERROR_MSG)
+    })
+
+    it('should not allow deposit under minPerTx', async() => {
+      const owner = accounts[0]
+      const user = accounts[1]
+      const recipient = accounts[2]
+      const foreignTokenAddress = '0x2222222222222222222222222222222222222222'
+      const underMinPerTx = minPerTx.minus(1)
+      const tokenTransferCall = homeBridge.contract.depositToken.getData(homeToken.address, recipient, underMinPerTx)
+
+      await homeToken.mint(user, underMinPerTx, {from: owner }).should.be.fulfilled
+      await homeBridge.registerToken(foreignTokenAddress, homeToken.address).should.be.fulfilled
+      await homeToken.transferAndCall(homeBridge.address, underMinPerTx, tokenTransferCall, {from: user}).should.be.rejectedWith(ERROR_MSG)
+    })
+
+    it('should not allow deposit over dailyLimit', async() => {
+      const owner = accounts[0]
+      const user = accounts[1]
+      const recipient = accounts[2]
+      const foreignTokenAddress = '0x2222222222222222222222222222222222222222'
+      const tokenTransferCall = homeBridge.contract.depositToken.getData(homeToken.address, recipient, maxPerTx)
+
+      await homeToken.mint(user, maxPerTx.times(2), {from: owner }).should.be.fulfilled
+      await homeBridge.registerToken(foreignTokenAddress, homeToken.address).should.be.fulfilled
+      await homeToken.transferAndCall(homeBridge.address, maxPerTx, tokenTransferCall, {from: user}).should.be.fulfilled
+      await homeToken.transferAndCall(homeBridge.address, maxPerTx, tokenTransferCall, {from: user}).should.be.rejectedWith(ERROR_MSG)
     })
   })
 

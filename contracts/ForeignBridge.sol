@@ -45,8 +45,9 @@ contract ForeignBridge is BasicBridge, Initializable {
         requiredBlockConfirmations = _requiredBlockConfirmations;
     }
 
-    function withdrawNative(address _recipient) public payable {
-        // TODO: add limits
+    function withdrawNative(address _recipient) external payable {
+        require(withinLimit(address(0), msg.value));
+        totalSpentPerDay[address(0)][getCurrentDay()] = totalSpentPerDay[address(0)][getCurrentDay()].add(msg.value);
         emit Withdraw(address(0), _recipient, msg.value);
     }
 

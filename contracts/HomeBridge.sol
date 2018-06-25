@@ -60,20 +60,19 @@ contract HomeBridge is Initializable, BasicBridge {
         requiredBlockConfirmations = _requiredBlockConfirmations;
     }
 
-    function depositNative(address recipient) public payable {
-        require(msg.value > 0);
+    function depositNative(address recipient) external payable {
         require(withinLimit(address(0), msg.value));
         totalSpentPerDay[address(0)][getCurrentDay()] = totalSpentPerDay[address(0)][getCurrentDay()].add(msg.value);
         emit Deposit(address(0), recipient, msg.value);
     }
 
-    function depositToken(address homeToken, address recipient, uint256 value) public {
-        // TODO: Add limits
-        require(value > 0);
+    function depositToken(address homeToken, address recipient, uint256 value) external {
+        require(withinLimit(homeToken, value));
 
         address foreignToken = homeToForeignTokenMap[homeToken];
         require(homeToForeignTokenMap[homeToken] != address(0));
 
+        totalSpentPerDay[homeToken][getCurrentDay()] = totalSpentPerDay[homeToken][getCurrentDay()].add(value);
         IBurnableMintableToken(homeToken).burn(value);
         emit Deposit(foreignToken, recipient, value);
     }
@@ -142,7 +141,7 @@ contract HomeBridge is Initializable, BasicBridge {
         }
     }
 
-    function registerToken(address foreignAddress, address homeAddress) public onlyOwner {
+    function registerToken(address foreignAddress, address homeAddress) external onlyOwner {
         // Do not allow registering of address zero, as the mapping of 0 => 0 is used for native token transfer
         require(foreignAddress != address(0) && homeAddress != address(0));
         require(foreignToHomeTokenMap[foreignAddress] == address(0) && homeToForeignTokenMap[homeAddress] == address(0));

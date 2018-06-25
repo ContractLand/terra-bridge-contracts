@@ -249,6 +249,23 @@ contract('ForeignBridge', async (accounts) => {
         value: amount
       })
     })
+
+    it('should not allow deposit out of limits', async () => {
+      const sender = accounts[1]
+      const recipient = accounts[2]
+
+      const overMaxPerTx = oneEther
+      await foreignBridge.withdrawNative(recipient, { from: sender, value: overMaxPerTx }).should.be.rejectedWith(ERROR_MSG)
+
+      const underMinPerTx = 1
+      await foreignBridge.withdrawNative(recipient, { from: sender, value: underMinPerTx }).should.be.rejectedWith(ERROR_MSG)
+
+      await foreignBridge.setDailyLimit(ADDRESS_ZERO, minPerTx).should.be.fulfilled
+      const overDailyLimit = minPerTx.add(1)
+      await foreignBridge.withdrawNative(recipient, { from: sender, value: overDailyLimit }).should.be.rejectedWith(ERROR_MSG)
+      await foreignBridge.withdrawNative(recipient, { from: sender, value: minPerTx }).should.be.fulfilled
+      await foreignBridge.withdrawNative(recipient, { from: sender, value: minPerTx }).should.be.rejectedWith(ERROR_MSG)
+    })
   })
 
   describe('#withdrawToken', async () => {
