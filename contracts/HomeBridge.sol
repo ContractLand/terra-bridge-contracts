@@ -66,10 +66,10 @@ contract HomeBridge is Initializable, BasicBridge {
         emit Deposit(msg.sender, msg.value);
     }
 
-    function withdraw(address token, address recipient, uint256 value, bytes32 transactionHash) external onlyValidator {
-        require(token == address(0) || foreignToHomeTokenMap[token] != address(0));
+    function withdraw(address foreignToken, address recipient, uint256 value, bytes32 transactionHash) external onlyValidator {
+        address homeToken = foreignToHomeTokenMap[foreignToken];
+        require(foreignToken == address(0) || homeToken != address(0));
 
-        address homeToken = foreignToHomeTokenMap[token];
         bytes32 hashMsg = keccak256(homeToken, recipient, value, transactionHash);
         bytes32 hashSender = keccak256(msg.sender, hashMsg);
         // Duplicated deposits
@@ -92,7 +92,7 @@ contract HomeBridge is Initializable, BasicBridge {
 
             // Passing the mapped home token address here even when token address is 0x0. This is okay because
             // by default the address mapped to 0x0 will also be 0x0
-            performTransfer(homeToken, recipient, value);
+            performWithdraw(homeToken, recipient, value);
             emit Withdraw(homeToken, recipient, value, transactionHash);
         }
     }
@@ -135,7 +135,7 @@ contract HomeBridge is Initializable, BasicBridge {
       foreignToHomeTokenMap[foreignAddress] = homeAddress;
     }
 
-    function performTransfer(address token, address recipient, uint256 value) private {
+    function performWithdraw(address token, address recipient, uint256 value) private {
       if (token == address(0)) {
           recipient.transfer(value);
           return;
