@@ -57,7 +57,7 @@ contract('ForeignBridge', async (accounts) => {
     })
   })
 
-  describe.only('#deposit', async () => {
+  describe('#deposit', async () => {
     beforeEach(async () => {
       foreignBridge = await ForeignBridge.new()
       erc20token = await StandardERC20Token.new('Test', 'TST', web3.toWei(1, "ether"));
@@ -326,7 +326,7 @@ contract('ForeignBridge', async (accounts) => {
     })
   })
 
-  describe.only('#claimTokens', async () => {
+  describe('#claimTokens', async () => {
     it('can claim erc20', async () => {
       const owner = accounts[0];
       foreignBridge = await ForeignBridge.new();
