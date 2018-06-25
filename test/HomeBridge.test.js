@@ -221,7 +221,7 @@ contract('HomeBridge', async (accounts) => {
     })
   })
 
-  describe('#setting limits', async () => {
+  describe('#settings', async () => {
     let homeContract;
     beforeEach(async () => {
       homeContract = await HomeBridge.new()
@@ -239,6 +239,15 @@ contract('HomeBridge', async (accounts) => {
       await homeContract.setMinPerTx(1, {from: owner}).should.be.fulfilled;
 
       await homeContract.setMinPerTx(2, {from: owner}).should.be.rejectedWith(ERROR_MSG);
+    })
+
+    it('#registerToken can only be called by owner and cannot override existing mapping', async () => {
+      const homeTokenAddress = '0x1111111111111111111111111111111111111111'
+      const foreignTokenAddress = '0x2222222222222222222222222222222222222222'
+
+      await homeContract.registerToken(foreignTokenAddress, homeTokenAddress, { from: authorities[0] }).should.be.rejectedWith(ERROR_MSG)
+      await homeContract.registerToken(foreignTokenAddress, homeTokenAddress, { from: owner }).should.be.fulfilled
+      await homeContract.registerToken(foreignTokenAddress, homeTokenAddress, { from: owner }).should.be.rejectedWith(ERROR_MSG)
     })
   })
 

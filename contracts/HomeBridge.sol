@@ -142,19 +142,19 @@ contract HomeBridge is Initializable, BasicBridge {
         }
     }
 
-    // TODO: make this onlyOwner
-    function registerToken(address foreignAddress, address homeAddress) public {
-      foreignToHomeTokenMap[foreignAddress] = homeAddress;
-      homeToForeignTokenMap[homeAddress] = foreignAddress;
+    function registerToken(address foreignAddress, address homeAddress) public onlyOwner {
+        require(foreignToHomeTokenMap[foreignAddress] == address(0) && homeToForeignTokenMap[homeAddress] == address(0));
+        foreignToHomeTokenMap[foreignAddress] = homeAddress;
+        homeToForeignTokenMap[homeAddress] = foreignAddress;
     }
 
     function performWithdraw(address token, address recipient, uint256 value) private {
-      if (token == address(0)) {
-          recipient.transfer(value);
-          return;
-      }
+        if (token == address(0)) {
+            recipient.transfer(value);
+            return;
+        }
 
-      IBurnableMintableToken(token).mint(recipient, value);
+        IBurnableMintableToken(token).mint(recipient, value);
     }
 
     function signature(bytes32 _hash, uint256 _index) public view returns (bytes) {
