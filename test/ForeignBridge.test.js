@@ -77,7 +77,7 @@ contract('ForeignBridge', async (accounts) => {
       var vrs = signatureToVRS(signature);
 
       // Pre-fund the bridge with some ether
-      await web3.eth.sendTransaction({from:accounts[0], to:foreignBridge.address, value: value})
+      await foreignBridge.withdrawNative(accounts[0], {from:accounts[0], value: value})
 
       false.should.be.equal(await foreignBridge.deposits(transactionHash))
       const {logs} = await foreignBridge.deposit([vrs.v], [vrs.r], [vrs.s], message).should.be.fulfilled
@@ -212,6 +212,42 @@ contract('ForeignBridge', async (accounts) => {
       var vrs = signatureToVRS(signature);
       false.should.be.equal(await foreignBridgeWithMultiSignatures.deposits(transactionHash))
       await foreignBridgeWithMultiSignatures.deposit([vrs.v, vrs.v], [vrs.r, vrs.r], [vrs.s, vrs.s], message).should.be.rejectedWith(ERROR_MSG)
+    })
+  })
+
+  describe('#withdrawNative', async () => {
+    beforeEach(async () => {
+      foreignBridge = await ForeignBridge.new()
+      const oneEther = web3.toBigNumber(web3.toWei(1, "ether"));
+      const halfEther = web3.toBigNumber(web3.toWei(0.5, "ether"));
+      await foreignBridge.initialize(validatorContract.address, oneEther, halfEther, minPerTx, gasPrice, requireBlockConfirmations).should.be.fulfilled
+    })
+
+    it('should adjust ether balance on successful withdraw', async () => {
+      const sender = accounts[1]
+      const recipient = accounts[2]
+      const amount = halfEther
+      const senderBalanceBefore = await web3.eth.getBalance(sender)
+      const bridgeBalanceBefore = await web3.eth.getBalance(foreignBridge.address)
+
+      await foreignBridge.withdrawNative(recipient, { from: sender, value: amount, gasPrice: 0 }).should.be.fulfilled
+
+      senderBalanceBefore.minus(amount).should.be.bignumber.equal(await web3.eth.getBalance(sender))
+      bridgeBalanceBefore.plus(amount).should.be.bignumber.equal(await web3.eth.getBalance(foreignBridge.address))
+    })
+
+    it('should event withdraw event on successful withdraw', async () => {
+      const sender = accounts[1]
+      const recipient = accounts[2]
+      const amount = halfEther
+
+      const {logs} = await foreignBridge.withdrawNative(recipient, { from: sender, value: amount, gasPrice: 0 }).should.be.fulfilled
+      logs[0].event.should.be.equal('Withdraw')
+      logs[0].args.should.be.deep.equal({
+        token: ADDRESS_ZERO,
+        recipient,
+        value: amount
+      })
     })
   })
 

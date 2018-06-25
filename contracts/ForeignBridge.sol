@@ -45,12 +45,17 @@ contract ForeignBridge is BasicBridge, Initializable {
         requiredBlockConfirmations = _requiredBlockConfirmations;
     }
 
-    function onTokenTransfer(address _token, address _receipient, uint256 _value, bytes /*_data*/) external {
+    function withdrawNative(address _recipient) public payable {
+        emit Withdraw(address(0), _recipient, msg.value);
+    }
+
+    // TODO: Rename to withdrawToken
+    function onTokenTransfer(address _token, address _recipient, uint256 _value, bytes /*_data*/) external {
         require(withinLimit(_value));
         totalSpentPerDay[getCurrentDay()] = totalSpentPerDay[getCurrentDay()].add(_value);
 
         require(ERC20Token(_token).transferFrom(msg.sender, this, _value));
-        emit Withdraw(_token, _receipient, _value);
+        emit Withdraw(_token, _recipient, _value);
     }
 
     function claimTokens(address _token, address _to) external onlyOwner {
@@ -93,10 +98,5 @@ contract ForeignBridge is BasicBridge, Initializable {
 
         ERC20Token token = ERC20Token(tokenAddress);
         require(token.transfer(recipient, amount));
-    }
-
-    function () public payable {
-      // TODO: Empty fallback function to accept ether for testing purpose.
-      // Get ride of this once onTokenTransfer accepts Ether
     }
 }
