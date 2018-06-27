@@ -79,6 +79,7 @@ contract('HomeBridge', async (accounts) => {
       await homeBridge.setMaxPerTx(homeToken.address, maxPerTx)
       await homeBridge.setMinPerTx(homeToken.address, minPerTx)
     })
+
     it('should not accept un-registered tokens', async() => {
       const owner = accounts[0]
       const user = accounts[1]
@@ -177,9 +178,22 @@ contract('HomeBridge', async (accounts) => {
       homeContract = await HomeBridge.new()
       await homeContract.initialize(validatorContract.address, '3', '2', '1', gasPrice, requireBlockConfirmations)
     })
-    it('should accept CLC', async () => {
+
+    it('should not allow transfer if home native-token is not mapped to a token on foreign', async () => {
       const user = accounts[1]
       const recipient = accounts[2]
+      await homeContract.depositNative(recipient, {
+        from: user,
+        value: 1
+      }).should.be.rejectedWith(ERROR_MSG)
+    })
+
+    it('should accept home native-token', async () => {
+      const user = accounts[1]
+      const recipient = accounts[2]
+      const foreignNativeAddress = '0x2222222222222222222222222222222222222222'
+      await homeContract.registerToken(foreignNativeAddress, ADDRESS_ZERO).should.be.fulfilled
+
       const currentDay = await homeContract.getCurrentDay()
       '0'.should.be.bignumber.equal(await homeContract.totalSpentPerDay(ADDRESS_ZERO, currentDay))
       const {logs} = await homeContract.depositNative(recipient, {
@@ -193,7 +207,7 @@ contract('HomeBridge', async (accounts) => {
       }).should.be.rejectedWith(ERROR_MSG);
       logs[0].event.should.be.equal('Deposit')
       logs[0].args.should.be.deep.equal({
-        token: ADDRESS_ZERO,
+        token: foreignNativeAddress,
         recipient: recipient,
         value: new web3.BigNumber(1)
       })
@@ -208,6 +222,9 @@ contract('HomeBridge', async (accounts) => {
     it('doesnt let you send more than max amount per tx', async () => {
       const user = accounts[1]
       const recipient = accounts[2]
+      const foreignNativeAddress = '0x2222222222222222222222222222222222222222'
+      await homeContract.registerToken(foreignNativeAddress, ADDRESS_ZERO).should.be.fulfilled
+
       await homeContract.depositNative(recipient, {
         from: user,
         value: 1
@@ -238,6 +255,9 @@ contract('HomeBridge', async (accounts) => {
       const newDailyLimit = 100;
       const newMaxPerTx = 50;
       const newMinPerTx = 20;
+      const foreignNativeAddress = '0x2222222222222222222222222222222222222222'
+      await homeContract.registerToken(foreignNativeAddress, ADDRESS_ZERO).should.be.fulfilled
+
       await homeContract.setDailyLimit(ADDRESS_ZERO, newDailyLimit).should.be.fulfilled;
       await homeContract.setMaxPerTx(ADDRESS_ZERO, newMaxPerTx).should.be.fulfilled;
       await homeContract.setMinPerTx(ADDRESS_ZERO, newMinPerTx).should.be.fulfilled;
@@ -273,13 +293,11 @@ contract('HomeBridge', async (accounts) => {
       await homeContract.setMinPerTx(ADDRESS_ZERO, 2, {from: owner}).should.be.rejectedWith(ERROR_MSG);
     })
 
-    it('#registerToken can only be called by owner, cannot override existing mapping, and cannot register 0x0', async () => {
+    it('#registerToken can only be called by owner, cannot override existing mapping', async () => {
       const homeTokenAddress = '0x1111111111111111111111111111111111111111'
       const foreignTokenAddress = '0x2222222222222222222222222222222222222222'
 
       await homeContract.registerToken(foreignTokenAddress, homeTokenAddress, { from: authorities[0] }).should.be.rejectedWith(ERROR_MSG)
-      await homeContract.registerToken(ADDRESS_ZERO, homeTokenAddress, { from: owner }).should.be.rejectedWith(ERROR_MSG)
-      await homeContract.registerToken(foreignTokenAddress, ADDRESS_ZERO, { from: owner }).should.be.rejectedWith(ERROR_MSG)
       await homeContract.registerToken(foreignTokenAddress, homeTokenAddress, { from: owner }).should.be.fulfilled
       await homeContract.registerToken(foreignTokenAddress, homeTokenAddress, { from: owner }).should.be.rejectedWith(ERROR_MSG)
     })
@@ -290,10 +308,6 @@ contract('HomeBridge', async (accounts) => {
     beforeEach(async () => {
       homeBridge = await HomeBridge.new();
       await homeBridge.initialize(validatorContract.address, oneEther, halfEther, minPerTx, gasPrice, requireBlockConfirmations);
-      const {logs} = await homeBridge.depositNative(accounts[2], {
-        from: accounts[2],
-        value: halfEther
-      }).should.be.fulfilled
     })
 
     it('should not transfer token not registered in bridge', async () => {
@@ -337,12 +351,20 @@ contract('HomeBridge', async (accounts) => {
     })
 
     it('should allow validator to withdraw native token via trafer', async () => {
-      const token = ADDRESS_ZERO
+      const foreignTokenAddress = '0x2222222222222222222222222222222222222222'
       const recipient = accounts[5]
       const value = halfEther
       const balanceBefore = await web3.eth.getBalance(recipient)
       const transactionHash = "0x806335163828a8eda675cff9c84fa6e6c7cf06bb44cc6ec832e42fe789d01415";
-      const {logs} = await homeBridge.withdraw(token, recipient, value, transactionHash, {from: authorities[0]})
+
+      const homeTokenMapping = ADDRESS_ZERO
+      await homeBridge.registerToken(foreignTokenAddress, homeTokenMapping).should.be.fulfilled
+      await homeBridge.depositNative(accounts[2], {
+        from: accounts[2],
+        value: halfEther
+      }).should.be.fulfilled
+
+      const {logs} = await homeBridge.withdraw(foreignTokenAddress, recipient, value, transactionHash, {from: authorities[0]})
       logs[0].event.should.be.equal("SignedForWithdraw");
       logs[0].args.should.be.deep.equal({
         signer: authorities[0],
@@ -350,7 +372,7 @@ contract('HomeBridge', async (accounts) => {
       });
       logs[1].event.should.be.equal("Withdraw");
       logs[1].args.should.be.deep.equal({
-        token,
+        token: homeTokenMapping,
         recipient,
         value,
         transactionHash
@@ -360,7 +382,7 @@ contract('HomeBridge', async (accounts) => {
       balanceAfter.should.be.bignumber.equal(balanceBefore.add(value))
       homeBalanceAfter.should.be.bignumber.equal(0)
 
-      const msgHash = Web3Utils.soliditySha3(token, recipient, value, transactionHash);
+      const msgHash = Web3Utils.soliditySha3(homeTokenMapping, recipient, value, transactionHash);
       const senderHash = Web3Utils.soliditySha3(authorities[0], msgHash)
       true.should.be.equal(await homeBridge.withdrawalsSigned(senderHash))
     })
@@ -372,6 +394,8 @@ contract('HomeBridge', async (accounts) => {
       await validatorContractWith2Signatures.initialize(2, authoritiesTwoAccs, ownerOfValidators, { from: ownerOfValidators} )
       let homeBridgeWithTwoSigs = await HomeBridge.new();
       await homeBridgeWithTwoSigs.initialize(validatorContractWith2Signatures.address, oneEther, halfEther, minPerTx, gasPrice, requireBlockConfirmations);
+      const foreignNativeAddress = '0x2222222222222222222222222222222222222222'
+      await homeBridgeWithTwoSigs.registerToken(foreignNativeAddress, ADDRESS_ZERO).should.be.fulfilled
 
       await homeBridgeWithTwoSigs.depositNative(accounts[2], {
         from: accounts[2],
@@ -387,7 +411,7 @@ contract('HomeBridge', async (accounts) => {
       const balanceBefore = await web3.eth.getBalance(recipient)
       const msgHash = Web3Utils.soliditySha3(token, recipient, value, transactionHash);
 
-      const {logs} = await homeBridgeWithTwoSigs.withdraw(token, recipient, value, transactionHash, {from: authoritiesTwoAccs[0]}).should.be.fulfilled;
+      const {logs} = await homeBridgeWithTwoSigs.withdraw(foreignNativeAddress, recipient, value, transactionHash, {from: authoritiesTwoAccs[0]}).should.be.fulfilled;
       logs[0].event.should.be.equal("SignedForWithdraw");
       logs[0].args.should.be.deep.equal({
         signer: authorities[0],
@@ -397,8 +421,8 @@ contract('HomeBridge', async (accounts) => {
       const notProcessed = await homeBridgeWithTwoSigs.numWithdrawalsSigned(msgHash);
       notProcessed.should.be.bignumber.equal(1);
 
-      await homeBridgeWithTwoSigs.withdraw(token, recipient, value, transactionHash, {from: authoritiesTwoAccs[0]}).should.be.rejectedWith(ERROR_MSG);
-      const secondSignature = await homeBridgeWithTwoSigs.withdraw(token, recipient, value, transactionHash, {from: authoritiesTwoAccs[1]}).should.be.fulfilled;
+      await homeBridgeWithTwoSigs.withdraw(foreignNativeAddress, recipient, value, transactionHash, {from: authoritiesTwoAccs[0]}).should.be.rejectedWith(ERROR_MSG);
+      const secondSignature = await homeBridgeWithTwoSigs.withdraw(foreignNativeAddress, recipient, value, transactionHash, {from: authoritiesTwoAccs[1]}).should.be.fulfilled;
 
       const balanceAfter = await web3.eth.getBalance(recipient)
       balanceAfter.should.be.bignumber.equal(balanceBefore.add(value))
@@ -424,10 +448,15 @@ contract('HomeBridge', async (accounts) => {
     })
 
     it('should not allow to double submit', async () => {
-      const token = ADDRESS_ZERO
+      const token = '0x2222222222222222222222222222222222222222'
       const recipient = accounts[5];
       const value = '1';
       const transactionHash = "0x806335163828a8eda675cff9c84fa6e6c7cf06bb44cc6ec832e42fe789d01415";
+      await homeBridge.registerToken(token, ADDRESS_ZERO).should.be.fulfilled
+      await homeBridge.depositNative(recipient, {
+        from: recipient,
+        value: minPerTx
+      }).should.be.fulfilled
       await homeBridge.withdraw(token, recipient, value, transactionHash, {from: authorities[0]}).should.be.fulfilled;
       await homeBridge.withdraw(token, recipient, value, transactionHash, {from: authorities[0]}).should.be.rejectedWith(ERROR_MSG);
     })
@@ -447,6 +476,8 @@ contract('HomeBridge', async (accounts) => {
       await validatorContractWith2Signatures.initialize(2, authoritiesTwoAccs, ownerOfValidators, { from: ownerOfValidators })
       let homeBridgeWithTwoSigs = await HomeBridge.new();
       await homeBridgeWithTwoSigs.initialize(validatorContractWith2Signatures.address, oneEther, halfEther, minPerTx, gasPrice, requireBlockConfirmations);
+      const foreignNativeAddress = '0x2222222222222222222222222222222222222222'
+      await homeBridgeWithTwoSigs.registerToken(foreignNativeAddress, ADDRESS_ZERO).should.be.fulfilled
 
       await homeBridgeWithTwoSigs.depositNative(accounts[2], {
         from: accounts[2],
@@ -461,13 +492,13 @@ contract('HomeBridge', async (accounts) => {
       const transactionHash = "0x806335163828a8eda675cff9c84fa6e6c7cf06bb44cc6ec832e42fe789d01415";
       const balanceBefore = await web3.eth.getBalance(recipient)
 
-      await homeBridgeWithTwoSigs.withdraw(token, recipient, value, transactionHash, {from: authoritiesTwoAccs[0]}).should.be.fulfilled;
-      await homeBridgeWithTwoSigs.withdraw(token, recipient, value, transactionHash, {from: authoritiesTwoAccs[1]}).should.be.fulfilled;
+      await homeBridgeWithTwoSigs.withdraw(foreignNativeAddress, recipient, value, transactionHash, {from: authoritiesTwoAccs[0]}).should.be.fulfilled;
+      await homeBridgeWithTwoSigs.withdraw(foreignNativeAddress, recipient, value, transactionHash, {from: authoritiesTwoAccs[1]}).should.be.fulfilled;
       balanceBefore.add(value).should.be.bignumber.equal(await web3.eth.getBalance(recipient))
       await validatorContractWith2Signatures.setRequiredSignatures(3).should.be.fulfilled;
-      await homeBridgeWithTwoSigs.withdraw(token, recipient, value, transactionHash, {from: authoritiesTwoAccs[2]}).should.be.rejectedWith(ERROR_MSG);
+      await homeBridgeWithTwoSigs.withdraw(foreignNativeAddress, recipient, value, transactionHash, {from: authoritiesTwoAccs[2]}).should.be.rejectedWith(ERROR_MSG);
       await validatorContractWith2Signatures.setRequiredSignatures(1).should.be.fulfilled;
-      await homeBridgeWithTwoSigs.withdraw(token, recipient, value, transactionHash, {from: authoritiesTwoAccs[2]}).should.be.rejectedWith(ERROR_MSG);
+      await homeBridgeWithTwoSigs.withdraw(foreignNativeAddress, recipient, value, transactionHash, {from: authoritiesTwoAccs[2]}).should.be.rejectedWith(ERROR_MSG);
       balanceBefore.add(value).should.be.bignumber.equal(await web3.eth.getBalance(recipient))
 
     })

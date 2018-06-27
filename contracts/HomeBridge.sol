@@ -63,23 +63,27 @@ contract HomeBridge is Initializable, BasicBridge {
     function depositNative(address recipient) external payable {
         require(withinLimit(address(0), msg.value));
         totalSpentPerDay[address(0)][getCurrentDay()] = totalSpentPerDay[address(0)][getCurrentDay()].add(msg.value);
-        emit Deposit(address(0), recipient, msg.value);
+
+        address foreignToken = homeToForeignTokenMap[address(0)];
+        require(foreignToken != address(0));
+
+        emit Deposit(foreignToken, recipient, msg.value);
     }
 
     function depositToken(address homeToken, address recipient, uint256 value) external {
         require(withinLimit(homeToken, value));
+        totalSpentPerDay[homeToken][getCurrentDay()] = totalSpentPerDay[homeToken][getCurrentDay()].add(value);
 
         address foreignToken = homeToForeignTokenMap[homeToken];
-        require(homeToForeignTokenMap[homeToken] != address(0));
+        require(foreignToHomeTokenMap[foreignToken] == homeToken);
 
-        totalSpentPerDay[homeToken][getCurrentDay()] = totalSpentPerDay[homeToken][getCurrentDay()].add(value);
         IBurnableMintableToken(homeToken).burn(value);
         emit Deposit(foreignToken, recipient, value);
     }
 
     function withdraw(address foreignToken, address recipient, uint256 value, bytes32 transactionHash) external onlyValidator {
         address homeToken = foreignToHomeTokenMap[foreignToken];
-        require(foreignToken == address(0) || homeToken != address(0));
+        require(isRegisterd(foreignToken, homeToken));
 
         bytes32 hashMsg = keccak256(abi.encodePacked(homeToken, recipient, value, transactionHash));
         bytes32 hashSender = keccak256(abi.encodePacked(msg.sender, hashMsg));
@@ -142,11 +146,18 @@ contract HomeBridge is Initializable, BasicBridge {
     }
 
     function registerToken(address foreignAddress, address homeAddress) external onlyOwner {
-        // Do not allow registering of address zero, as the mapping of 0 => 0 is used for native token transfer
-        require(foreignAddress != address(0) && homeAddress != address(0));
         require(foreignToHomeTokenMap[foreignAddress] == address(0) && homeToForeignTokenMap[homeAddress] == address(0));
         foreignToHomeTokenMap[foreignAddress] = homeAddress;
         homeToForeignTokenMap[homeAddress] = foreignAddress;
+    }
+
+    function isRegisterd(address foreignToken,  address homeToken) private view returns (bool) {
+        if(foreignToken == address(0) && homeToken == address(0)) {
+            return false;
+        } else {
+            return (foreignToHomeTokenMap[foreignToken] == homeToken &&
+                    homeToForeignTokenMap[homeToken] == foreignToken);
+        }
     }
 
     function performWithdraw(address token, address recipient, uint256 value) private {
