@@ -4,22 +4,22 @@ const deployHome = require('./src/home');
 const deployForeign = require('./src/foreign');
 
 async function main() {
-  const homeBridge = await deployHome()
-  const {foreignBridge, erc20} = await deployForeign();
+  const foreign = await deployForeign();
+  const home = await deployHome(foreign.foreignTokenForHomeNative)
   console.log("\n**************************************************")
   console.log("          Deployment has been completed.          ")
   console.log("**************************************************\n\n")
-  console.log(`[   Home  ] HomeBridge: ${homeBridge.bridgeAddress} at block ${homeBridge.bridgeDeployedBlockNumber}`)
-  console.log(`[ Foreign ] ForeignBridge: ${foreignBridge.address} at block ${foreignBridge.deployedBlockNumber}`)
-  console.log(`[ Foreign ] ERC20: ${erc20.address}`)
+  console.log(`[ Foreign ] ForeignBridge: ${foreign.bridge} at block ${foreign.bridgeDeployedBlockNumber}`)
+  console.log(`[ Foreign ] ForiegnTokenForHomeNative: ${foreign.foreignTokenForHomeNative}`)
+  console.log(`[   Home  ] HomeBridge: ${home.bridge} at block ${home.bridgeDeployedBlockNumber}`)
+  console.log(`[   Home  ] HomeTokenForHomeNative: ${home.homeTokenForForeignNative}`)
   fs.writeFileSync('./bridgeDeploymentResults.json', JSON.stringify({
     home: {
-      ...homeBridge,
+      ...home,
     },
-    foreignBridge: {
-      ...foreignBridge,
+    foreign: {
+      ...foreign
     },
-    erc20
   },null,4));
   console.log('Contracts Deployment have been saved to `bridgeDeploymentResults.json`')
 }
