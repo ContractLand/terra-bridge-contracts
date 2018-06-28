@@ -198,7 +198,7 @@ async function deployHome(foreignTokenForHomeNative)
   homeNonce++;
 
   console.log('\n[Home] register Home-Native token mapping: ', foreignTokenForHomeNative)
-  const setHomeNativeMapping = await homeBridgeImplementation.methods.registerToken(foreignTokenForHomeNative, homeToken.options.address).encodeABI({from: DEPLOYMENT_ACCOUNT_ADDRESS})
+  const setHomeNativeMapping = await homeBridgeImplementation.methods.registerToken(foreignTokenForHomeNative, '0x0000000000000000000000000000000000000000').encodeABI({from: DEPLOYMENT_ACCOUNT_ADDRESS})
   const txSetHomeNativeMapping = await sendRawTx({
     data: setHomeNativeMapping,
     nonce: homeNonce,
