@@ -9,9 +9,9 @@ async function main() {
   console.log("\n**************************************************")
   console.log("          Deployment has been completed.          ")
   console.log("**************************************************\n\n")
-  console.log(`[ Foreign ] ForeignBridge: ${foreign.bridge} at block ${foreign.bridgeDeployedBlockNumber}`)
+  console.log(`[ Foreign ] ForeignBridge: ${foreign.bridge}`)
   console.log(`[ Foreign ] ForiegnTokenForHomeNative: ${foreign.foreignTokenForHomeNative}`)
-  console.log(`[   Home  ] HomeBridge: ${home.bridge} at block ${home.bridgeDeployedBlockNumber}`)
+  console.log(`[   Home  ] HomeBridge: ${home.bridge}`)
   console.log(`[   Home  ] HomeTokenForHomeNative: ${home.homeTokenForForeignNative}`)
   fs.writeFileSync('./bridgeDeploymentResults.json', JSON.stringify({
     home: {
