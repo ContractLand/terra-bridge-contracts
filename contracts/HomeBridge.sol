@@ -2,6 +2,7 @@ pragma solidity ^0.4.23;
 
 import "./libraries/SafeMath.sol";
 import "./libraries/Message.sol";
+import "./interfaces/IBurnableMintableToken.sol";
 import "./BasicBridge.sol";
 import "./migrations/Initializable.sol";
 
@@ -10,6 +11,10 @@ contract HomeBridge is Initializable, BasicBridge {
 
     /* Beginning of V1 storage variables */
 
+    // mapping between foreign token addresses to home token addresses
+    mapping(address => address) public foreignToHomeTokenMap;
+    // mapping between home token addresses to foreign token addresses
+    mapping(address => address) public homeToForeignTokenMap;
     // mapping between message hash and deposit message. Message is the hash of (recipientAccount, depositValue, transactionHash)
     mapping(bytes32 => bytes) public messages;
     // mapping between hash of (deposit message hash, validator index) to the validator signature
@@ -25,8 +30,8 @@ contract HomeBridge is Initializable, BasicBridge {
 
     /* End of V1 storage variables */
 
-    event Deposit (address recipient, uint256 value);
-    event Withdraw (address recipient, uint256 value, bytes32 transactionHash);
+    event Deposit (address token, address recipient, uint256 value);
+    event Withdraw (address token, address recipient, uint256 value, bytes32 transactionHash);
     event SignedForDeposit(address indexed signer, bytes32 messageHash);
     event SignedForWithdraw(address indexed signer, bytes32 transactionHash);
     event CollectedSignatures(address authorityResponsibleForRelay, bytes32 messageHash, uint256 NumberOfCollectedSignatures);
@@ -48,24 +53,40 @@ contract HomeBridge is Initializable, BasicBridge {
 
         validatorContractAddress = _validatorContract;
         deployedAtBlock = block.number;
-        dailyLimit = _dailyLimit;
-        maxPerTx = _maxPerTx;
-        minPerTx = _minPerTx;
+        dailyLimit[address(0)] = _dailyLimit;
+        maxPerTx[address(0)] = _maxPerTx;
+        minPerTx[address(0)] = _minPerTx;
         gasPrice = _homeGasPrice;
         requiredBlockConfirmations = _requiredBlockConfirmations;
     }
 
-    function () public payable {
-        require(msg.value > 0);
-        require(msg.data.length == 0);
-        require(withinLimit(msg.value));
-        totalSpentPerDay[getCurrentDay()] = totalSpentPerDay[getCurrentDay()].add(msg.value);
-        emit Deposit(msg.sender, msg.value);
+    function depositNative(address recipient) external payable {
+        require(withinLimit(address(0), msg.value));
+        totalSpentPerDay[address(0)][getCurrentDay()] = totalSpentPerDay[address(0)][getCurrentDay()].add(msg.value);
+
+        address foreignToken = homeToForeignTokenMap[address(0)];
+        require(foreignToken != address(0));
+
+        emit Deposit(foreignToken, recipient, msg.value);
     }
 
-    function withdraw(address recipient, uint256 value, bytes32 transactionHash) external onlyValidator {
-        bytes32 hashMsg = keccak256(recipient, value, transactionHash);
-        bytes32 hashSender = keccak256(msg.sender, hashMsg);
+    function depositToken(address homeToken, address recipient, uint256 value) external {
+        require(withinLimit(homeToken, value));
+        totalSpentPerDay[homeToken][getCurrentDay()] = totalSpentPerDay[homeToken][getCurrentDay()].add(value);
+
+        address foreignToken = homeToForeignTokenMap[homeToken];
+        require(foreignToHomeTokenMap[foreignToken] == homeToken);
+
+        IBurnableMintableToken(homeToken).burn(value);
+        emit Deposit(foreignToken, recipient, value);
+    }
+
+    function withdraw(address foreignToken, address recipient, uint256 value, bytes32 transactionHash) external onlyValidator {
+        address homeToken = foreignToHomeTokenMap[foreignToken];
+        require(isRegisterd(foreignToken, homeToken));
+
+        bytes32 hashMsg = keccak256(abi.encodePacked(homeToken, recipient, value, transactionHash));
+        bytes32 hashSender = keccak256(abi.encodePacked(msg.sender, hashMsg));
         // Duplicated deposits
         require(!withdrawalsSigned[hashSender]);
         withdrawalsSigned[hashSender] = true;
@@ -83,8 +104,11 @@ contract HomeBridge is Initializable, BasicBridge {
             // If the bridge contract does not own enough tokens to transfer
             // it will cause funds lock on the home side of the bridge
             numWithdrawalsSigned[hashMsg] = markAsProcessed(signed);
-            recipient.transfer(value);
-            emit Withdraw(recipient, value, transactionHash);
+
+            // Passing the mapped home token address here even when token address is 0x0. This is okay because
+            // by default the address mapped to 0x0 will also be 0x0
+            performWithdraw(homeToken, recipient, value);
+            emit Withdraw(homeToken, recipient, value, transactionHash);
         }
     }
 
@@ -93,7 +117,7 @@ contract HomeBridge is Initializable, BasicBridge {
         require(Message.isMessageValid(message));
         require(msg.sender == Message.recoverAddressFromSignedMessage(signature, message));
         bytes32 hashMsg = keccak256(message);
-        bytes32 hashSender = keccak256(msg.sender, hashMsg);
+        bytes32 hashSender = keccak256(abi.encodePacked(msg.sender, hashMsg));
 
         uint256 signed = numMessagesSigned[hashMsg];
         require(!isAlreadyProcessed(signed));
@@ -107,7 +131,7 @@ contract HomeBridge is Initializable, BasicBridge {
         }
         messagesSigned[hashSender] = true;
 
-        bytes32 signIdx = keccak256(hashMsg, (signed-1));
+        bytes32 signIdx = keccak256(abi.encodePacked(hashMsg, (signed-1)));
         signatures[signIdx] = signature;
 
         numMessagesSigned[hashMsg] = signed;
@@ -121,8 +145,32 @@ contract HomeBridge is Initializable, BasicBridge {
         }
     }
 
+    function registerToken(address foreignAddress, address homeAddress) external onlyOwner {
+        require(foreignToHomeTokenMap[foreignAddress] == address(0) && homeToForeignTokenMap[homeAddress] == address(0));
+        foreignToHomeTokenMap[foreignAddress] = homeAddress;
+        homeToForeignTokenMap[homeAddress] = foreignAddress;
+    }
+
+    function isRegisterd(address foreignToken,  address homeToken) private view returns (bool) {
+        if(foreignToken == address(0) && homeToken == address(0)) {
+            return false;
+        } else {
+            return (foreignToHomeTokenMap[foreignToken] == homeToken &&
+                    homeToForeignTokenMap[homeToken] == foreignToken);
+        }
+    }
+
+    function performWithdraw(address token, address recipient, uint256 value) private {
+        if (token == address(0)) {
+            recipient.transfer(value);
+            return;
+        }
+
+        IBurnableMintableToken(token).mint(recipient, value);
+    }
+
     function signature(bytes32 _hash, uint256 _index) public view returns (bytes) {
-        bytes32 signIdx = keccak256(_hash, _index);
+        bytes32 signIdx = keccak256(abi.encodePacked(_hash, _index));
         return signatures[signIdx];
     }
 

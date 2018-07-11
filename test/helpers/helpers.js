@@ -74,21 +74,25 @@ module.exports.getBalances = getBalances;
 
 
 // returns hex string of the bytes of the message
-// composed from `recipient`, `value` and `transactionHash`
+// composed from `token`,`recipient`, `value` and `transactionHash`
 // that is relayed from `foreign` to `home` on withdraw
-function createMessage(recipient, value, transactionHash) {
+function createMessage(token, recipient,  value, transactionHash) {
   web3._extend.utils.isBigNumber(value);
+
+  token = strip0x(token);
+  assert.equal(token.length, 20 * 2);
+
   recipient = strip0x(recipient);
   assert.equal(recipient.length, 20 * 2);
 
   var value = strip0x(bigNumberToPaddedBytes32(value));
-  assert.equal(value.length, 64);
+  assert.equal(value.length, 32 * 2);
 
   transactionHash = strip0x(transactionHash);
   assert.equal(transactionHash.length, 32 * 2);
 
-  var message = "0x" + recipient + value + transactionHash;
-  var expectedMessageLength = (20 + 32 + 32) * 2 + 2;
+  var message = "0x" + token + recipient + value + transactionHash;
+  var expectedMessageLength = (20 + 20 + 32 + 32) * 2 + 2;
   assert.equal(message.length, expectedMessageLength);
   return message;
 }

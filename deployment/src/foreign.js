@@ -39,11 +39,6 @@ async function deployForeign() {
   console.log('========================================\n')
 
   /*** Deploying BridgeValidators for foreign ***/
-  console.log('\n[Foreign] deploying ERC20 token:')
-  const erc20Foreign = await deployContract(ERC20, [FOREIGN_TOKEN_NAME, FOREIGN_TOKEN_SYMBOL, Web3Utils.toWei(FOREIGN_TOKEN_TOTAL)], {from: DEPLOYMENT_ACCOUNT_ADDRESS, network: 'foreign', nonce: foreignNonce})
-  foreignNonce++;
-  console.log('[Foreign] ERC20: ', erc20Foreign.options.address)
-
   console.log('\n[Foreign] deploying implementation for foreign validators:')
   let bridgeValidatorsForeign = await deployContract(BridgeValidators, [], {from: DEPLOYMENT_ACCOUNT_ADDRESS, network: 'foreign', nonce: foreignNonce})
   foreignNonce++;
@@ -72,7 +67,7 @@ async function deployForeign() {
   console.log(`REQUIRED_NUMBER_OF_VALIDATORS: ${REQUIRED_NUMBER_OF_VALIDATORS}, VALIDATORS: ${VALIDATORS}`)
   bridgeValidatorsForeign.options.address = bridgeValidatorsForeignProxy.options.address
   const initializeForeignData = await bridgeValidatorsForeign.methods.initialize(
-    REQUIRED_NUMBER_OF_VALIDATORS, VALIDATORS, FOREIGN_OWNER_MULTISIG
+    REQUIRED_NUMBER_OF_VALIDATORS, VALIDATORS, DEPLOYMENT_ACCOUNT_ADDRESS
   ).encodeABI({from: DEPLOYMENT_ACCOUNT_ADDRESS});
   const txInitializeForeign = await sendRawTx({
     data: initializeForeignData,
@@ -83,7 +78,7 @@ async function deployForeign() {
   });
   assert.equal(txInitializeForeign.status, '0x1', 'Transaction Failed');
   const validatorOwner = await bridgeValidatorsForeign.methods.owner().call();
-  assert.ok(compareHex(validatorOwner.toLowerCase(), FOREIGN_OWNER_MULTISIG.toLocaleLowerCase()));
+  assert.ok(compareHex(validatorOwner.toLowerCase(), DEPLOYMENT_ACCOUNT_ADDRESS.toLocaleLowerCase()));
   foreignNonce++;
 
   /*** Deploying ForeignBridge ***/
@@ -119,16 +114,58 @@ async function deployForeign() {
   `)
   foreignBridgeImplementation.options.address = foreignBridgeProxy.options.address
   const initializeFBridgeData = await foreignBridgeImplementation.methods.initialize(
-    bridgeValidatorsForeign.options.address, erc20Foreign.options.address, FOREIGN_DAILY_LIMIT, FOREIGN_MAX_AMOUNT_PER_TX, FOREIGN_MIN_AMOUNT_PER_TX, FOREIGN_GAS_PRICE, FOREIGN_REQUIRED_BLOCK_CONFIRMATIONS
+    bridgeValidatorsForeign.options.address, FOREIGN_DAILY_LIMIT, FOREIGN_MAX_AMOUNT_PER_TX, FOREIGN_MIN_AMOUNT_PER_TX, FOREIGN_GAS_PRICE, FOREIGN_REQUIRED_BLOCK_CONFIRMATIONS
   ).encodeABI({from: DEPLOYMENT_ACCOUNT_ADDRESS});
   const txInitializeBridge = await sendRawTx({
     data: initializeFBridgeData,
     nonce: foreignNonce,
-    to: foreignBridgeProxy.options.address,
+    to: foreignBridgeImplementation.options.address,
     privateKey: deploymentPrivateKey,
     url: FOREIGN_RPC_URL
   });
   assert.equal(txInitializeBridge.status, '0x1', 'Transaction Failed');
+  foreignNonce++;
+
+  console.log('\n[Foreign] deploying ERC20 version of Home-Native token:')
+  const erc20Foreign = await deployContract(ERC20, [FOREIGN_TOKEN_NAME, FOREIGN_TOKEN_SYMBOL, Web3Utils.toWei(FOREIGN_TOKEN_TOTAL)], {from: DEPLOYMENT_ACCOUNT_ADDRESS, network: 'foreign', nonce: foreignNonce})
+  foreignNonce++;
+  console.log('[Foreign] ERC20: ', erc20Foreign.options.address)
+
+  console.log('\n[Foreign] setting transfer limits of ERC20 for Home-Native with parameters:')
+  console.log(`
+    FOREIGN_DAILY_LIMIT : ${FOREIGN_DAILY_LIMIT} which is ${Web3Utils.fromWei(FOREIGN_DAILY_LIMIT)} in eth,
+    FOREIGN_MAX_AMOUNT_PER_TX: ${FOREIGN_MAX_AMOUNT_PER_TX} which is ${Web3Utils.fromWei(FOREIGN_MAX_AMOUNT_PER_TX)} in eth,
+    FOREIGN_MIN_AMOUNT_PER_TX: ${FOREIGN_MIN_AMOUNT_PER_TX} which is ${Web3Utils.fromWei(FOREIGN_MIN_AMOUNT_PER_TX)} in eth
+  `)
+  const setDailyLimitData = await foreignBridgeImplementation.methods.setDailyLimit(erc20Foreign.options.address, FOREIGN_DAILY_LIMIT).encodeABI({from: DEPLOYMENT_ACCOUNT_ADDRESS})
+  const txSetDailyLimit = await sendRawTx({
+    data: setDailyLimitData,
+    nonce: foreignNonce,
+    to: foreignBridgeImplementation.options.address,
+    privateKey: deploymentPrivateKey,
+    url: FOREIGN_RPC_URL
+  });
+  assert.equal(txSetDailyLimit.status, '0x1', 'Transaction Failed');
+  foreignNonce++;
+  const setMaxPerTxData = await foreignBridgeImplementation.methods.setMaxPerTx(erc20Foreign.options.address, FOREIGN_MAX_AMOUNT_PER_TX).encodeABI({from: DEPLOYMENT_ACCOUNT_ADDRESS})
+  const txSetMaxPerTxLimit = await sendRawTx({
+    data: setMaxPerTxData,
+    nonce: foreignNonce,
+    to: foreignBridgeImplementation.options.address,
+    privateKey: deploymentPrivateKey,
+    url: FOREIGN_RPC_URL
+  });
+  assert.equal(txSetMaxPerTxLimit.status, '0x1', 'Transaction Failed');
+  foreignNonce++;
+  const setMinPerTxData = await foreignBridgeImplementation.methods.setMinPerTx(erc20Foreign.options.address, FOREIGN_MIN_AMOUNT_PER_TX).encodeABI({from: DEPLOYMENT_ACCOUNT_ADDRESS})
+  const txSetMinPerTxLimit = await sendRawTx({
+    data: setMinPerTxData,
+    nonce: foreignNonce,
+    to: foreignBridgeImplementation.options.address,
+    privateKey: deploymentPrivateKey,
+    url: FOREIGN_RPC_URL
+  });
+  assert.equal(txSetMinPerTxLimit.status, '0x1', 'Transaction Failed');
   foreignNonce++;
 
   console.log('\n[Foreign] transfer all created token to foreign bridge contract:')
@@ -147,16 +184,27 @@ async function deployForeign() {
   assert.equal(Web3Utils.fromWei(bridgeBalance), FOREIGN_TOKEN_TOTAL);
   foreignNonce++;
 
+  console.log('\n[Foreign] transferring ownership to multisig for ForeignBridge validators contract:');
+  const validatorsTransferOwnerData = await bridgeValidatorsForeign.methods.transferOwnership(FOREIGN_OWNER_MULTISIG).encodeABI();
+  const txValidatorsTransferOwnerData = await sendRawTx({
+    data: validatorsTransferOwnerData,
+    nonce: foreignNonce,
+    to: bridgeValidatorsForeign.options.address,
+    privateKey: deploymentPrivateKey,
+    url: FOREIGN_RPC_URL
+  })
+  assert.equal(txValidatorsTransferOwnerData.status, '0x1', 'Transaction Failed');
+  const newValidatorOwner = await bridgeValidatorsForeign.methods.owner().call();
+  assert.ok(compareHex(newValidatorOwner.toLowerCase(), FOREIGN_OWNER_MULTISIG.toLocaleLowerCase()));
+  foreignNonce++;
+
   console.log('\n***Foreign Bridge Deployment is complete***\n')
 
   return {
-    foreignBridge: {
-      address: foreignBridgeImplementation.options.address,
-      deployedBlockNumber: Web3Utils.hexToNumber(foreignBridgeImplementation.deployedBlockNumber)
-    },
-    erc20: {
-      address: erc20Foreign.options.address
-    }
+    bridgeValidators: bridgeValidatorsForeign.options.address,
+    bridge: foreignBridgeImplementation.options.address,
+    bridgeDeployedBlockNumber: Web3Utils.hexToNumber(foreignBridgeImplementation.deployedBlockNumber),
+    foreignTokenForHomeNative: erc20Foreign.options.address
   }
 }
 
