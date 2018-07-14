@@ -66,7 +66,7 @@ contract('HomeBridge', async (accounts) => {
     })
   })
 
-  describe('#depositToken', async () => {
+  describe('#transferTokenToForeign', async () => {
     let homeToken
     let dailyLimit = new web3.BigNumber(3)
     let maxPerTx = new web3.BigNumber(2)
@@ -86,85 +86,85 @@ contract('HomeBridge', async (accounts) => {
       const recipient = accounts[2]
       const amount = 1
 
-      const tokenTransferCall = homeBridge.contract.depositToken.getData(homeToken.address, recipient, amount)
+      const tokenTransferCall = homeBridge.contract.transferTokenToForeign.getData(homeToken.address, recipient, amount)
 
       await homeToken.mint(user, amount, {from: owner }).should.be.fulfilled
       await homeToken.transferAndCall(homeBridge.address, amount, tokenTransferCall, {from: user}).should.be.rejectedWith(ERROR_MSG)
     })
 
-    it('should burn token on successful deposit', async () => {
+    it('should burn token on successful transfer', async () => {
       const owner = accounts[0]
       const user = accounts[1]
       const recipient = accounts[2]
       const foreignTokenAddress = '0x2222222222222222222222222222222222222222'
-      const depositAmount = 1
-      const tokenTransferCall = homeBridge.contract.depositToken.getData(homeToken.address, recipient, depositAmount)
+      const transferAmount = 1
+      const tokenTransferCall = homeBridge.contract.transferTokenToForeign.getData(homeToken.address, recipient, transferAmount)
 
-      await homeToken.mint(user, depositAmount, {from: owner }).should.be.fulfilled
+      await homeToken.mint(user, transferAmount, {from: owner }).should.be.fulfilled
       const userBalanceBefore = await homeToken.balanceOf(user)
       const bridgeBalanceBefore = await homeToken.balanceOf(homeBridge.address)
       const totalSupplyBefore = await homeToken.totalSupply()
 
       await homeBridge.registerToken(foreignTokenAddress, homeToken.address).should.be.fulfilled
-      await homeToken.transferAndCall(homeBridge.address, depositAmount, tokenTransferCall, {from: user}).should.be.fulfilled
+      await homeToken.transferAndCall(homeBridge.address, transferAmount, tokenTransferCall, {from: user}).should.be.fulfilled
 
-      userBalanceBefore.minus(depositAmount).should.be.bignumber.equal(await homeToken.balanceOf(user))
+      userBalanceBefore.minus(transferAmount).should.be.bignumber.equal(await homeToken.balanceOf(user))
       bridgeBalanceBefore.should.be.bignumber.equal(await homeToken.balanceOf(homeBridge.address))
-      totalSupplyBefore.minus(depositAmount).should.be.bignumber.equal(await homeToken.totalSupply())
+      totalSupplyBefore.minus(transferAmount).should.be.bignumber.equal(await homeToken.totalSupply())
     })
 
-    it('should emit deposit event on successful deposit', async () => {
+    it('should emit transfer event on successful transfer', async () => {
       const owner = accounts[0]
       const user = accounts[1]
       const recipient = accounts[2]
       const foreignTokenAddress = '0x2222222222222222222222222222222222222222'
-      const depositAmount = 1
+      const transferAmount = 1
 
-      await homeToken.mint(user, depositAmount, {from: owner }).should.be.fulfilled
-      await homeToken.transfer(homeBridge.address, depositAmount, {from: user }).should.be.fulfilled
+      await homeToken.mint(user, transferAmount, {from: owner }).should.be.fulfilled
+      await homeToken.transfer(homeBridge.address, transferAmount, {from: user }).should.be.fulfilled
       await homeBridge.registerToken(foreignTokenAddress, homeToken.address).should.be.fulfilled
-      const {logs} = await homeBridge.depositToken(homeToken.address, recipient, depositAmount, {from: user}).should.be.fulfilled
+      const {logs} = await homeBridge.transferTokenToForeign(homeToken.address, recipient, transferAmount, {from: user}).should.be.fulfilled
 
-      logs[0].event.should.be.equal('Deposit')
+      logs[0].event.should.be.equal('TransferToForeign')
       logs[0].args.should.be.deep.equal({
         token: foreignTokenAddress,
         recipient,
-        value: new web3.BigNumber(depositAmount)
+        value: new web3.BigNumber(transferAmount)
       })
     })
 
-    it('should not allow deposit over maxPerTx', async() => {
+    it('should not allow transfer over maxPerTx', async() => {
       const owner = accounts[0]
       const user = accounts[1]
       const recipient = accounts[2]
       const foreignTokenAddress = '0x2222222222222222222222222222222222222222'
       const overMaxPerTx = maxPerTx.plus(1)
-      const tokenTransferCall = homeBridge.contract.depositToken.getData(homeToken.address, recipient, overMaxPerTx)
+      const tokenTransferCall = homeBridge.contract.transferTokenToForeign.getData(homeToken.address, recipient, overMaxPerTx)
 
       await homeToken.mint(user, overMaxPerTx, {from: owner }).should.be.fulfilled
       await homeBridge.registerToken(foreignTokenAddress, homeToken.address).should.be.fulfilled
       await homeToken.transferAndCall(homeBridge.address, overMaxPerTx, tokenTransferCall, {from: user}).should.be.rejectedWith(ERROR_MSG)
     })
 
-    it('should not allow deposit under minPerTx', async() => {
+    it('should not allow transfer under minPerTx', async() => {
       const owner = accounts[0]
       const user = accounts[1]
       const recipient = accounts[2]
       const foreignTokenAddress = '0x2222222222222222222222222222222222222222'
       const underMinPerTx = minPerTx.minus(1)
-      const tokenTransferCall = homeBridge.contract.depositToken.getData(homeToken.address, recipient, underMinPerTx)
+      const tokenTransferCall = homeBridge.contract.transferTokenToForeign.getData(homeToken.address, recipient, underMinPerTx)
 
       await homeToken.mint(user, underMinPerTx, {from: owner }).should.be.fulfilled
       await homeBridge.registerToken(foreignTokenAddress, homeToken.address).should.be.fulfilled
       await homeToken.transferAndCall(homeBridge.address, underMinPerTx, tokenTransferCall, {from: user}).should.be.rejectedWith(ERROR_MSG)
     })
 
-    it('should not allow deposit over dailyLimit', async() => {
+    it('should not allow transfer over dailyLimit', async() => {
       const owner = accounts[0]
       const user = accounts[1]
       const recipient = accounts[2]
       const foreignTokenAddress = '0x2222222222222222222222222222222222222222'
-      const tokenTransferCall = homeBridge.contract.depositToken.getData(homeToken.address, recipient, maxPerTx)
+      const tokenTransferCall = homeBridge.contract.transferTokenToForeign.getData(homeToken.address, recipient, maxPerTx)
 
       await homeToken.mint(user, maxPerTx.times(2), {from: owner }).should.be.fulfilled
       await homeBridge.registerToken(foreignTokenAddress, homeToken.address).should.be.fulfilled
@@ -173,7 +173,7 @@ contract('HomeBridge', async (accounts) => {
     })
   })
 
-  describe('#depositNative', async () => {
+  describe('#transferNativeToForeign', async () => {
     beforeEach(async () => {
       homeContract = await HomeBridge.new()
       await homeContract.initialize(validatorContract.address, '3', '2', '1', gasPrice, requireBlockConfirmations)
@@ -182,7 +182,7 @@ contract('HomeBridge', async (accounts) => {
     it('should not allow transfer if home native-token is not mapped to a token on foreign', async () => {
       const user = accounts[1]
       const recipient = accounts[2]
-      await homeContract.depositNative(recipient, {
+      await homeContract.transferNativeToForeign(recipient, {
         from: user,
         value: 1
       }).should.be.rejectedWith(ERROR_MSG)
@@ -196,23 +196,23 @@ contract('HomeBridge', async (accounts) => {
 
       const currentDay = await homeContract.getCurrentDay()
       '0'.should.be.bignumber.equal(await homeContract.totalSpentPerDay(ADDRESS_ZERO, currentDay))
-      const {logs} = await homeContract.depositNative(recipient, {
+      const {logs} = await homeContract.transferNativeToForeign(recipient, {
         from: user,
         value: 1
       }).should.be.fulfilled
       '1'.should.be.bignumber.equal(await homeContract.totalSpentPerDay(ADDRESS_ZERO, currentDay))
-      await homeContract.depositNative(recipient, {
+      await homeContract.transferNativeToForeign(recipient, {
         from: user,
         value: 3
       }).should.be.rejectedWith(ERROR_MSG);
-      logs[0].event.should.be.equal('Deposit')
+      logs[0].event.should.be.equal('TransferToForeign')
       logs[0].args.should.be.deep.equal({
         token: foreignNativeAddress,
         recipient: recipient,
         value: new web3.BigNumber(1)
       })
       await homeContract.setDailyLimit(ADDRESS_ZERO, 4).should.be.fulfilled;
-      await homeContract.depositNative(recipient, {
+      await homeContract.transferNativeToForeign(recipient, {
         from: user,
         value: 1
       }).should.be.fulfilled
@@ -225,11 +225,11 @@ contract('HomeBridge', async (accounts) => {
       const foreignNativeAddress = '0x2222222222222222222222222222222222222222'
       await homeContract.registerToken(foreignNativeAddress, ADDRESS_ZERO).should.be.fulfilled
 
-      await homeContract.depositNative(recipient, {
+      await homeContract.transferNativeToForeign(recipient, {
         from: user,
         value: 1
       }).should.be.fulfilled
-      await homeContract.depositNative(recipient, {
+      await homeContract.transferNativeToForeign(recipient, {
         from: user,
         value: 3
       }).should.be.rejectedWith(ERROR_MSG)
@@ -237,19 +237,19 @@ contract('HomeBridge', async (accounts) => {
       await homeContract.setDailyLimit(ADDRESS_ZERO, 100).should.be.fulfilled;
       await homeContract.setMaxPerTx(ADDRESS_ZERO, 99).should.be.fulfilled;
       //meets max per tx and daily limit
-      await homeContract.depositNative(recipient, {
+      await homeContract.transferNativeToForeign(recipient, {
         from: user,
         value: 99
       }).should.be.fulfilled
       //above daily limit
-      await homeContract.depositNative(recipient, {
+      await homeContract.transferNativeToForeign(recipient, {
         from: user,
         value: 1
       }).should.be.rejectedWith(ERROR_MSG)
 
     })
 
-    it('should not let to deposit less than minPerTx', async () => {
+    it('should not let to transfer less than minPerTx', async () => {
       const user = accounts[1]
       const recipient = accounts[2]
       const newDailyLimit = 100;
@@ -262,11 +262,11 @@ contract('HomeBridge', async (accounts) => {
       await homeContract.setMaxPerTx(ADDRESS_ZERO, newMaxPerTx).should.be.fulfilled;
       await homeContract.setMinPerTx(ADDRESS_ZERO, newMinPerTx).should.be.fulfilled;
 
-      await homeContract.depositNative(recipient, {
+      await homeContract.transferNativeToForeign(recipient, {
         from: user,
         value: newMinPerTx
       }).should.be.fulfilled
-      await homeContract.depositNative(recipient, {
+      await homeContract.transferNativeToForeign(recipient, {
         from: user,
         value: newMinPerTx - 1
       }).should.be.rejectedWith(ERROR_MSG)
@@ -303,7 +303,7 @@ contract('HomeBridge', async (accounts) => {
     })
   })
 
-  describe('#withdraw', async () => {
+  describe('#transferFromForeign', async () => {
     let homeBridge;
     beforeEach(async () => {
       homeBridge = await HomeBridge.new();
@@ -315,10 +315,10 @@ contract('HomeBridge', async (accounts) => {
       const recipient = accounts[5]
       const transactionHash = "0x806335163828a8eda675cff9c84fa6e6c7cf06bb44cc6ec832e42fe789d01415";
 
-      await homeBridge.withdraw(unregisteredToken, recipient, halfEther, transactionHash, {from: authorities[0]}).should.be.rejectedWith(ERROR_MSG);
+      await homeBridge.transferFromForeign(unregisteredToken, recipient, halfEther, transactionHash, {from: authorities[0]}).should.be.rejectedWith(ERROR_MSG);
     })
 
-    it('should allow validator to withdraw token via minting', async () => {
+    it('should allow validator to transferFromForeign token via minting', async () => {
       const foreignTokenAddress = '0x2222222222222222222222222222222222222222'
       const homeToken = await HomeToken.new("Home Token", "HTK", 18);
       const recipient = accounts[5]
@@ -329,14 +329,14 @@ contract('HomeBridge', async (accounts) => {
 
       await homeToken.transferOwnership(homeBridge.address)
       await homeBridge.registerToken(foreignTokenAddress, homeToken.address)
-      const {logs} = await homeBridge.withdraw(foreignTokenAddress, recipient, value, transactionHash, {from: authorities[0]}).should.be.fulfilled
+      const {logs} = await homeBridge.transferFromForeign(foreignTokenAddress, recipient, value, transactionHash, {from: authorities[0]}).should.be.fulfilled
 
-      logs[0].event.should.be.equal("SignedForWithdraw");
+      logs[0].event.should.be.equal("SignedForTransferFromForeign");
       logs[0].args.should.be.deep.equal({
         signer: authorities[0],
         transactionHash
       });
-      logs[1].event.should.be.equal("Withdraw");
+      logs[1].event.should.be.equal("TransferFromForeign");
       logs[1].args.should.be.deep.equal({
         token: homeToken.address,
         recipient,
@@ -350,7 +350,7 @@ contract('HomeBridge', async (accounts) => {
       totalSupplyAfter.should.be.bignumber.equal(tokenSupplyBefore.add(value))
     })
 
-    it('should allow validator to withdraw native token via trafer', async () => {
+    it('should allow validator to transferFromForeign native token via trafer', async () => {
       const foreignTokenAddress = '0x2222222222222222222222222222222222222222'
       const recipient = accounts[5]
       const value = halfEther
@@ -359,18 +359,18 @@ contract('HomeBridge', async (accounts) => {
 
       const homeTokenMapping = ADDRESS_ZERO
       await homeBridge.registerToken(foreignTokenAddress, homeTokenMapping).should.be.fulfilled
-      await homeBridge.depositNative(accounts[2], {
+      await homeBridge.transferNativeToForeign(accounts[2], {
         from: accounts[2],
         value: halfEther
       }).should.be.fulfilled
 
-      const {logs} = await homeBridge.withdraw(foreignTokenAddress, recipient, value, transactionHash, {from: authorities[0]})
-      logs[0].event.should.be.equal("SignedForWithdraw");
+      const {logs} = await homeBridge.transferFromForeign(foreignTokenAddress, recipient, value, transactionHash, {from: authorities[0]})
+      logs[0].event.should.be.equal("SignedForTransferFromForeign");
       logs[0].args.should.be.deep.equal({
         signer: authorities[0],
         transactionHash
       });
-      logs[1].event.should.be.equal("Withdraw");
+      logs[1].event.should.be.equal("TransferFromForeign");
       logs[1].args.should.be.deep.equal({
         token: homeTokenMapping,
         recipient,
@@ -384,7 +384,7 @@ contract('HomeBridge', async (accounts) => {
 
       const msgHash = Web3Utils.soliditySha3(homeTokenMapping, recipient, value, transactionHash);
       const senderHash = Web3Utils.soliditySha3(authorities[0], msgHash)
-      true.should.be.equal(await homeBridge.withdrawalsSigned(senderHash))
+      true.should.be.equal(await homeBridge.transfersSigned(senderHash))
     })
 
     it('test with 2 signatures required', async () => {
@@ -397,7 +397,7 @@ contract('HomeBridge', async (accounts) => {
       const foreignNativeAddress = '0x2222222222222222222222222222222222222222'
       await homeBridgeWithTwoSigs.registerToken(foreignNativeAddress, ADDRESS_ZERO).should.be.fulfilled
 
-      await homeBridgeWithTwoSigs.depositNative(accounts[2], {
+      await homeBridgeWithTwoSigs.transferNativeToForeign(accounts[2], {
         from: accounts[2],
         value: halfEther
       }).should.be.fulfilled
@@ -411,24 +411,24 @@ contract('HomeBridge', async (accounts) => {
       const balanceBefore = await web3.eth.getBalance(recipient)
       const msgHash = Web3Utils.soliditySha3(token, recipient, value, transactionHash);
 
-      const {logs} = await homeBridgeWithTwoSigs.withdraw(foreignNativeAddress, recipient, value, transactionHash, {from: authoritiesTwoAccs[0]}).should.be.fulfilled;
-      logs[0].event.should.be.equal("SignedForWithdraw");
+      const {logs} = await homeBridgeWithTwoSigs.transferFromForeign(foreignNativeAddress, recipient, value, transactionHash, {from: authoritiesTwoAccs[0]}).should.be.fulfilled;
+      logs[0].event.should.be.equal("SignedForTransferFromForeign");
       logs[0].args.should.be.deep.equal({
         signer: authorities[0],
         transactionHash
       });
       halfEther.should.be.bignumber.equal(await web3.eth.getBalance(homeBridgeWithTwoSigs.address))
-      const notProcessed = await homeBridgeWithTwoSigs.numWithdrawalsSigned(msgHash);
+      const notProcessed = await homeBridgeWithTwoSigs.numTransfersSigned(msgHash);
       notProcessed.should.be.bignumber.equal(1);
 
-      await homeBridgeWithTwoSigs.withdraw(foreignNativeAddress, recipient, value, transactionHash, {from: authoritiesTwoAccs[0]}).should.be.rejectedWith(ERROR_MSG);
-      const secondSignature = await homeBridgeWithTwoSigs.withdraw(foreignNativeAddress, recipient, value, transactionHash, {from: authoritiesTwoAccs[1]}).should.be.fulfilled;
+      await homeBridgeWithTwoSigs.transferFromForeign(foreignNativeAddress, recipient, value, transactionHash, {from: authoritiesTwoAccs[0]}).should.be.rejectedWith(ERROR_MSG);
+      const secondSignature = await homeBridgeWithTwoSigs.transferFromForeign(foreignNativeAddress, recipient, value, transactionHash, {from: authoritiesTwoAccs[1]}).should.be.fulfilled;
 
       const balanceAfter = await web3.eth.getBalance(recipient)
       balanceAfter.should.be.bignumber.equal(balanceBefore.add(value))
       '0'.should.be.bignumber.equal(await web3.eth.getBalance(homeBridgeWithTwoSigs.address))
 
-      secondSignature.logs[1].event.should.be.equal("Withdraw");
+      secondSignature.logs[1].event.should.be.equal("TransferFromForeign");
       secondSignature.logs[1].args.should.be.deep.equal({
         token,
         recipient,
@@ -437,12 +437,12 @@ contract('HomeBridge', async (accounts) => {
       })
 
       const senderHash = Web3Utils.soliditySha3(authoritiesTwoAccs[0], msgHash)
-      true.should.be.equal(await homeBridgeWithTwoSigs.withdrawalsSigned(senderHash))
+      true.should.be.equal(await homeBridgeWithTwoSigs.transfersSigned(senderHash))
 
       const senderHash2 = Web3Utils.soliditySha3(authoritiesTwoAccs[1], msgHash);
-      true.should.be.equal(await homeBridgeWithTwoSigs.withdrawalsSigned(senderHash2))
+      true.should.be.equal(await homeBridgeWithTwoSigs.transfersSigned(senderHash2))
 
-      const markedAsProcessed = await homeBridgeWithTwoSigs.numWithdrawalsSigned(msgHash);
+      const markedAsProcessed = await homeBridgeWithTwoSigs.numTransfersSigned(msgHash);
       const processed = new web3.BigNumber(2).pow(255).add(2);
       markedAsProcessed.should.be.bignumber.equal(processed)
     })
@@ -453,23 +453,23 @@ contract('HomeBridge', async (accounts) => {
       const value = '1';
       const transactionHash = "0x806335163828a8eda675cff9c84fa6e6c7cf06bb44cc6ec832e42fe789d01415";
       await homeBridge.registerToken(token, ADDRESS_ZERO).should.be.fulfilled
-      await homeBridge.depositNative(recipient, {
+      await homeBridge.transferNativeToForeign(recipient, {
         from: recipient,
         value: minPerTx
       }).should.be.fulfilled
-      await homeBridge.withdraw(token, recipient, value, transactionHash, {from: authorities[0]}).should.be.fulfilled;
-      await homeBridge.withdraw(token, recipient, value, transactionHash, {from: authorities[0]}).should.be.rejectedWith(ERROR_MSG);
+      await homeBridge.transferFromForeign(token, recipient, value, transactionHash, {from: authorities[0]}).should.be.fulfilled;
+      await homeBridge.transferFromForeign(token, recipient, value, transactionHash, {from: authorities[0]}).should.be.rejectedWith(ERROR_MSG);
     })
 
-    it('should not allow non-authorities to execute withdraw', async () => {
+    it('should not allow non-authorities to execute transferFromForeign', async () => {
       const token = ADDRESS_ZERO
       const recipient = accounts[5];
       const value = oneEther;
       const transactionHash = "0x806335163828a8eda675cff9c84fa6e6c7cf06bb44cc6ec832e42fe789d01415";
-      await homeBridge.withdraw(token, recipient, value, transactionHash, {from: accounts[7]}).should.be.rejectedWith(ERROR_MSG);
+      await homeBridge.transferFromForeign(token, recipient, value, transactionHash, {from: accounts[7]}).should.be.rejectedWith(ERROR_MSG);
     })
 
-    it('doesnt allow to withdraw if requiredSignatures has changed', async () => {
+    it('doesnt allow to transferFromForeign if requiredSignatures has changed', async () => {
       let validatorContractWith2Signatures = await BridgeValidators.new()
       let authoritiesTwoAccs = [accounts[1], accounts[2], accounts[3]];
       let ownerOfValidators = accounts[0]
@@ -479,7 +479,7 @@ contract('HomeBridge', async (accounts) => {
       const foreignNativeAddress = '0x2222222222222222222222222222222222222222'
       await homeBridgeWithTwoSigs.registerToken(foreignNativeAddress, ADDRESS_ZERO).should.be.fulfilled
 
-      await homeBridgeWithTwoSigs.depositNative(accounts[2], {
+      await homeBridgeWithTwoSigs.transferNativeToForeign(accounts[2], {
         from: accounts[2],
         value: halfEther
       }).should.be.fulfilled
@@ -492,13 +492,13 @@ contract('HomeBridge', async (accounts) => {
       const transactionHash = "0x806335163828a8eda675cff9c84fa6e6c7cf06bb44cc6ec832e42fe789d01415";
       const balanceBefore = await web3.eth.getBalance(recipient)
 
-      await homeBridgeWithTwoSigs.withdraw(foreignNativeAddress, recipient, value, transactionHash, {from: authoritiesTwoAccs[0]}).should.be.fulfilled;
-      await homeBridgeWithTwoSigs.withdraw(foreignNativeAddress, recipient, value, transactionHash, {from: authoritiesTwoAccs[1]}).should.be.fulfilled;
+      await homeBridgeWithTwoSigs.transferFromForeign(foreignNativeAddress, recipient, value, transactionHash, {from: authoritiesTwoAccs[0]}).should.be.fulfilled;
+      await homeBridgeWithTwoSigs.transferFromForeign(foreignNativeAddress, recipient, value, transactionHash, {from: authoritiesTwoAccs[1]}).should.be.fulfilled;
       balanceBefore.add(value).should.be.bignumber.equal(await web3.eth.getBalance(recipient))
       await validatorContractWith2Signatures.setRequiredSignatures(3).should.be.fulfilled;
-      await homeBridgeWithTwoSigs.withdraw(foreignNativeAddress, recipient, value, transactionHash, {from: authoritiesTwoAccs[2]}).should.be.rejectedWith(ERROR_MSG);
+      await homeBridgeWithTwoSigs.transferFromForeign(foreignNativeAddress, recipient, value, transactionHash, {from: authoritiesTwoAccs[2]}).should.be.rejectedWith(ERROR_MSG);
       await validatorContractWith2Signatures.setRequiredSignatures(1).should.be.fulfilled;
-      await homeBridgeWithTwoSigs.withdraw(foreignNativeAddress, recipient, value, transactionHash, {from: authoritiesTwoAccs[2]}).should.be.rejectedWith(ERROR_MSG);
+      await homeBridgeWithTwoSigs.transferFromForeign(foreignNativeAddress, recipient, value, transactionHash, {from: authoritiesTwoAccs[2]}).should.be.rejectedWith(ERROR_MSG);
       balanceBefore.add(value).should.be.bignumber.equal(await web3.eth.getBalance(recipient))
 
     })
@@ -532,7 +532,7 @@ contract('HomeBridge', async (accounts) => {
       var message = createMessage(someTokenAddress, recipientAccount, value, transactionHash);
       var signature = await sign(authoritiesTwoAccs[0], message)
       const {logs} = await homeBridgeWithTwoSigs.submitSignature(signature, message, {from: authorities[0]}).should.be.fulfilled;
-      logs[0].event.should.be.equal('SignedForDeposit')
+      logs[0].event.should.be.equal('SignedForTransferToForeign')
       const msgHashFromLog = logs[0].args.messageHash
       const signatureFromContract = await homeBridgeWithTwoSigs.signature(msgHashFromLog, 0);
       const messageFromContract = await homeBridgeWithTwoSigs.message(msgHashFromLog);

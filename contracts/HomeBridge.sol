@@ -15,25 +15,25 @@ contract HomeBridge is Initializable, BasicBridge {
     mapping(address => address) public foreignToHomeTokenMap;
     // mapping between home token addresses to foreign token addresses
     mapping(address => address) public homeToForeignTokenMap;
-    // mapping between message hash and deposit message. Message is the hash of (recipientAccount, depositValue, transactionHash)
+    // mapping between message hash and transfer message. Message is the hash of (recipientAccount, transferValue, transactionHash)
     mapping(bytes32 => bytes) public messages;
-    // mapping between hash of (deposit message hash, validator index) to the validator signature
+    // mapping between hash of (transfer message hash, validator index) to the validator signature
     mapping(bytes32 => bytes) public signatures;
-    // mapping between hash of (validator, withdrawl message hash) to whether the withdrawl was signed by the validator
-    mapping(bytes32 => bool) public withdrawalsSigned;
-    // mapping between the withdrawl message hash and the number of validator signatures
-    mapping(bytes32 => uint256) public numWithdrawalsSigned;
-    // mapping between the hash of (validator, deposit message hash) to whether the deposit was signed by the validator
+    // mapping between hash of (validator, transfer message hash) to whether the transfer was signed by the validator
+    mapping(bytes32 => bool) public transfersSigned;
+    // mapping between the transfer message hash and the number of validator signatures
+    mapping(bytes32 => uint256) public numTransfersSigned;
+    // mapping between the hash of (validator, transfer message hash) to whether the transfer was signed by the validator
     mapping(bytes32 => bool) public messagesSigned;
-    // mapping between the deposit message hash and the number of validator signatures
+    // mapping between the transfer message hash and the number of validator signatures
     mapping(bytes32 => uint256) public numMessagesSigned;
 
     /* End of V1 storage variables */
 
-    event Deposit (address token, address recipient, uint256 value);
-    event Withdraw (address token, address recipient, uint256 value, bytes32 transactionHash);
-    event SignedForDeposit(address indexed signer, bytes32 messageHash);
-    event SignedForWithdraw(address indexed signer, bytes32 transactionHash);
+    event TransferToForeign (address token, address recipient, uint256 value);
+    event TransferFromForeign (address token, address recipient, uint256 value, bytes32 transactionHash);
+    event SignedForTransferToForeign(address indexed signer, bytes32 messageHash);
+    event SignedForTransferFromForeign(address indexed signer, bytes32 transactionHash);
     event CollectedSignatures(address authorityResponsibleForRelay, bytes32 messageHash, uint256 NumberOfCollectedSignatures);
 
     function initialize (
@@ -60,17 +60,17 @@ contract HomeBridge is Initializable, BasicBridge {
         requiredBlockConfirmations = _requiredBlockConfirmations;
     }
 
-    function depositNative(address recipient) external payable {
+    function transferNativeToForeign(address recipient) external payable {
         require(withinLimit(address(0), msg.value));
         totalSpentPerDay[address(0)][getCurrentDay()] = totalSpentPerDay[address(0)][getCurrentDay()].add(msg.value);
 
         address foreignToken = homeToForeignTokenMap[address(0)];
         require(foreignToken != address(0));
 
-        emit Deposit(foreignToken, recipient, msg.value);
+        emit TransferToForeign(foreignToken, recipient, msg.value);
     }
 
-    function depositToken(address homeToken, address recipient, uint256 value) external {
+    function transferTokenToForeign(address homeToken, address recipient, uint256 value) external {
         require(withinLimit(homeToken, value));
         totalSpentPerDay[homeToken][getCurrentDay()] = totalSpentPerDay[homeToken][getCurrentDay()].add(value);
 
@@ -78,37 +78,37 @@ contract HomeBridge is Initializable, BasicBridge {
         require(foreignToHomeTokenMap[foreignToken] == homeToken);
 
         IBurnableMintableToken(homeToken).burn(value);
-        emit Deposit(foreignToken, recipient, value);
+        emit TransferToForeign(foreignToken, recipient, value);
     }
 
-    function withdraw(address foreignToken, address recipient, uint256 value, bytes32 transactionHash) external onlyValidator {
+    function transferFromForeign(address foreignToken, address recipient, uint256 value, bytes32 transactionHash) external onlyValidator {
         address homeToken = foreignToHomeTokenMap[foreignToken];
         require(isRegisterd(foreignToken, homeToken));
 
         bytes32 hashMsg = keccak256(abi.encodePacked(homeToken, recipient, value, transactionHash));
         bytes32 hashSender = keccak256(abi.encodePacked(msg.sender, hashMsg));
-        // Duplicated deposits
-        require(!withdrawalsSigned[hashSender]);
-        withdrawalsSigned[hashSender] = true;
+        // Duplicated transfers
+        require(!transfersSigned[hashSender]);
+        transfersSigned[hashSender] = true;
 
-        uint256 signed = numWithdrawalsSigned[hashMsg];
+        uint256 signed = numTransfersSigned[hashMsg];
         require(!isAlreadyProcessed(signed));
         // the check above assumes that the case when the value could be overflew will not happen in the addition operation below
         signed = signed + 1;
 
-        numWithdrawalsSigned[hashMsg] = signed;
+        numTransfersSigned[hashMsg] = signed;
 
-        emit SignedForWithdraw(msg.sender, transactionHash);
+        emit SignedForTransferFromForeign(msg.sender, transactionHash);
 
         if (signed >= requiredSignatures()) {
             // If the bridge contract does not own enough tokens to transfer
             // it will cause funds lock on the home side of the bridge
-            numWithdrawalsSigned[hashMsg] = markAsProcessed(signed);
+            numTransfersSigned[hashMsg] = markAsProcessed(signed);
 
             // Passing the mapped home token address here even when token address is 0x0. This is okay because
             // by default the address mapped to 0x0 will also be 0x0
-            performWithdraw(homeToken, recipient, value);
-            emit Withdraw(homeToken, recipient, value, transactionHash);
+            performTransferFromForeign(homeToken, recipient, value);
+            emit TransferFromForeign(homeToken, recipient, value, transactionHash);
         }
     }
 
@@ -136,7 +136,7 @@ contract HomeBridge is Initializable, BasicBridge {
 
         numMessagesSigned[hashMsg] = signed;
 
-        emit SignedForDeposit(msg.sender, hashMsg);
+        emit SignedForTransferToForeign(msg.sender, hashMsg);
 
         uint256 reqSigs = requiredSignatures();
         if (signed >= reqSigs) {
@@ -160,7 +160,7 @@ contract HomeBridge is Initializable, BasicBridge {
         }
     }
 
-    function performWithdraw(address token, address recipient, uint256 value) private {
+    function performTransferFromForeign(address token, address recipient, uint256 value) private {
         if (token == address(0)) {
             recipient.transfer(value);
             return;

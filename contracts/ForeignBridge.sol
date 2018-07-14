@@ -14,9 +14,9 @@ contract ForeignBridge is BasicBridge, Initializable {
     mapping(bytes32 => bool) public deposits;
     /* End of V1 storage variables */
 
-    // Triggered when relay of deposit from HomeBridge is complete
+    // Triggered when relay of transfer from HomeBridge is complete
     event TransferFromHome(address token, address recipient, uint value, bytes32 transactionHash);
-    // Event created on money withdraw.
+    // Event created on transfer to home.
     event TransferToHome(address token, address recipient, uint256 value);
     event GasConsumptionLimitsUpdated(uint256 gasLimitDepositRelay, uint256 gasLimitWithdrawConfirm);
 

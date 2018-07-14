@@ -75,7 +75,7 @@ module.exports.getBalances = getBalances;
 
 // returns hex string of the bytes of the message
 // composed from `token`,`recipient`, `value` and `transactionHash`
-// that is relayed from `foreign` to `home` on withdraw
+// that is relayed from `foreign` to `home` on transfer
 function createMessage(token, recipient,  value, transactionHash) {
   web3._extend.utils.isBigNumber(value);
 
