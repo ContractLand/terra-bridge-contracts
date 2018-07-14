@@ -15,9 +15,9 @@ contract ForeignBridge is BasicBridge, Initializable {
     /* End of V1 storage variables */
 
     // Triggered when relay of deposit from HomeBridge is complete
-    event Deposit(address token, address recipient, uint value, bytes32 transactionHash);
+    event TransferFromHome(address token, address recipient, uint value, bytes32 transactionHash);
     // Event created on money withdraw.
-    event Withdraw(address token, address recipient, uint256 value);
+    event TransferToHome(address token, address recipient, uint256 value);
     event GasConsumptionLimitsUpdated(uint256 gasLimitDepositRelay, uint256 gasLimitWithdrawConfirm);
 
     function initialize(
@@ -43,21 +43,21 @@ contract ForeignBridge is BasicBridge, Initializable {
         requiredBlockConfirmations = _requiredBlockConfirmations;
     }
 
-    function withdrawNative(address _recipient) external payable {
+    function transferNativeToHome(address _recipient) external payable {
         require(withinLimit(address(0), msg.value));
         totalSpentPerDay[address(0)][getCurrentDay()] = totalSpentPerDay[address(0)][getCurrentDay()].add(msg.value);
-        emit Withdraw(address(0), _recipient, msg.value);
+        emit TransferToHome(address(0), _recipient, msg.value);
     }
 
-    function withdrawToken(address _token, address _recipient, uint256 _value, bytes /*_data*/) external {
+    function transferTokenToHome(address _token, address _recipient, uint256 _value, bytes /*_data*/) external {
         require(withinLimit(_token, _value));
         totalSpentPerDay[_token][getCurrentDay()] = totalSpentPerDay[_token][getCurrentDay()].add(_value);
 
         require(ERC20Token(_token).transferFrom(msg.sender, this, _value));
-        emit Withdraw(_token, _recipient, _value);
+        emit TransferToHome(_token, _recipient, _value);
     }
 
-    function deposit(uint8[] vs, bytes32[] rs, bytes32[] ss, bytes message) external {
+    function transferFromHome(uint8[] vs, bytes32[] rs, bytes32[] ss, bytes message) external {
         Message.hasEnoughValidSignatures(message, vs, rs, ss, validatorContract());
         address token;
         address recipient;
@@ -68,7 +68,7 @@ contract ForeignBridge is BasicBridge, Initializable {
         deposits[txHash] = true;
 
         performDeposit(token, recipient, amount);
-        emit Deposit(token, recipient, amount, txHash);
+        emit TransferFromHome(token, recipient, amount, txHash);
     }
 
     function performDeposit(address tokenAddress, address recipient, uint256 amount) private {
