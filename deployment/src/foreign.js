@@ -88,7 +88,7 @@ async function deployForeign() {
   console.log('[Foreign] ForeignBridge Implementation: ', foreignBridgeImplementation.options.address)
 
   console.log('\n[Foreign] deploying proxy for foreignBridge:')
-  let foreignBridgeProxy = await deployContract(Proxy, [foreignBridgeImplementation.options.address], {from: DEPLOYMENT_ACCOUNT_ADDRESS, nonce: foreignNonce})
+  let foreignBridgeProxy = await deployContract(Proxy, [foreignBridgeImplementation.options.address], {from: DEPLOYMENT_ACCOUNT_ADDRESS, network: 'foreign', nonce: foreignNonce})
   console.log('[Foreign] ForeignBridge Proxy: ', foreignBridgeProxy.options.address)
   foreignNonce++;
 

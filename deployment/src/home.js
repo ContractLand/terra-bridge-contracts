@@ -41,12 +41,12 @@ async function deployHome(foreignTokenForHomeNative)
 
   /*** Deploying BridgeValidators for home ***/
   console.log('\n[Home] deploying implementation for home validators:')
-  let bridgeValidatorsHome = await deployContract(BridgeValidators, [], {from: DEPLOYMENT_ACCOUNT_ADDRESS, nonce: homeNonce})
+  let bridgeValidatorsHome = await deployContract(BridgeValidators, [], {from: DEPLOYMENT_ACCOUNT_ADDRESS, network: 'home', nonce: homeNonce})
   console.log('[Home] BridgeValidators Implementation: ', bridgeValidatorsHome.options.address)
   homeNonce++;
 
   console.log('\n[Home] deploying proxy for home validators:')
-  let bridgeValidatorsHomeProxy = await deployContract(Proxy, [bridgeValidatorsHome.options.address], {from: DEPLOYMENT_ACCOUNT_ADDRESS, nonce: homeNonce})
+  let bridgeValidatorsHomeProxy = await deployContract(Proxy, [bridgeValidatorsHome.options.address], {from: DEPLOYMENT_ACCOUNT_ADDRESS, network: 'home', nonce: homeNonce})
   console.log('[Home] BridgeValidators Proxy: ', bridgeValidatorsHomeProxy.options.address)
   homeNonce++;
 
@@ -85,12 +85,12 @@ async function deployHome(foreignTokenForHomeNative)
 
   /*** Deploying HomeBridge ***/
   console.log('\n[Home] deploying homeBridge implementation:')
-  const homeBridgeImplementation = await deployContract(HomeBridge, [], {from: DEPLOYMENT_ACCOUNT_ADDRESS, nonce: homeNonce})
+  const homeBridgeImplementation = await deployContract(HomeBridge, [], {from: DEPLOYMENT_ACCOUNT_ADDRESS, network: 'home', nonce: homeNonce})
   homeNonce++;
   console.log('[Home] HomeBridge Implementation: ', homeBridgeImplementation.options.address)
 
   console.log('\n[Home] deploying proxy for homeBridge:')
-  let homeBridgeProxy = await deployContract(Proxy, [homeBridgeImplementation.options.address], {from: DEPLOYMENT_ACCOUNT_ADDRESS, nonce: homeNonce})
+  let homeBridgeProxy = await deployContract(Proxy, [homeBridgeImplementation.options.address], {from: DEPLOYMENT_ACCOUNT_ADDRESS, network: 'home', nonce: homeNonce})
   console.log('[Home] HomeBridge Proxy: ', homeBridgeProxy.options.address)
   homeNonce++;
 
