@@ -10,8 +10,6 @@ contract ForeignBridge is BasicBridge, Initializable {
     using SafeMath for uint256;
 
     /* Beginning of V1 storage variables */
-    uint256 public gasLimitDepositRelay;
-    uint256 public gasLimitWithdrawConfirm;
     // mapping between the deposit transaction hash from the HomeBridge to whether the deposit has been processed
     mapping(bytes32 => bool) public deposits;
     /* End of V1 storage variables */
@@ -93,11 +91,5 @@ contract ForeignBridge is BasicBridge, Initializable {
         ERC20Token token = ERC20Token(_token);
         uint256 balance = token.balanceOf(this);
         require(token.transfer(_to, balance));
-    }
-
-    function setGasLimits(uint256 _gasLimitDepositRelay, uint256 _gasLimitWithdrawConfirm) external onlyOwner {
-        gasLimitDepositRelay = _gasLimitDepositRelay;
-        gasLimitWithdrawConfirm = _gasLimitWithdrawConfirm;
-        emit GasConsumptionLimitsUpdated(gasLimitDepositRelay, gasLimitWithdrawConfirm);
     }
 }
