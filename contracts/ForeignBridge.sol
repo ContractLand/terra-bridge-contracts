@@ -18,7 +18,6 @@ contract ForeignBridge is BasicBridge, Initializable {
     event TransferFromHome(address token, address recipient, uint value, bytes32 transactionHash);
     // Event created on transfer to home.
     event TransferToHome(address token, address recipient, uint256 value);
-    event GasConsumptionLimitsUpdated(uint256 gasLimitDepositRelay, uint256 gasLimitWithdrawConfirm);
 
     function initialize(
       address _validatorContract,
