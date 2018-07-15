@@ -48,7 +48,7 @@ contract ForeignBridge is BasicBridge, Initializable {
         emit TransferToHome(address(0), _recipient, msg.value);
     }
 
-    function transferTokenToHome(address _token, address _recipient, uint256 _value, bytes /*_data*/) external {
+    function transferTokenToHome(address _token, address _recipient, uint256 _value) external {
         require(withinLimit(_token, _value));
         totalSpentPerDay[_token][getCurrentDay()] = totalSpentPerDay[_token][getCurrentDay()].add(_value);
 
