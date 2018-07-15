@@ -1,7 +1,7 @@
 const ForeignBridge = artifacts.require("ForeignBridge.sol");
 const BridgeValidators = artifacts.require("BridgeValidators.sol");
 const UpgradeableProxy = artifacts.require("AdminUpgradeabilityProxy.sol");
-const StandardERC20Token = artifacts.require("StandardERC20Token.sol");
+const TestToken = artifacts.require("TestToken.sol");
 
 const {ERROR_MSG, ZERO_ADDRESS, ERROR_MSG_OPCODE} = require('./helpers/setup');
 const {createMessage, sign, signatureToVRS, strip0x} = require('./helpers/helpers');
@@ -61,7 +61,7 @@ contract('ForeignBridge', async (accounts) => {
   describe('#transferFromHome', async () => {
     beforeEach(async () => {
       foreignBridge = await ForeignBridge.new()
-      erc20token = await StandardERC20Token.new('Test', 'TST', web3.toWei(1, "ether"))
+      erc20token = await TestToken.new('Test', 'TST', web3.toWei(1, "ether"))
       const oneEther = web3.toBigNumber(web3.toWei(1, "ether"))
       const halfEther = web3.toBigNumber(web3.toWei(0.5, "ether"))
       await foreignBridge.initialize(validatorContract.address, oneEther, halfEther, minPerTx, gasPrice, requireBlockConfirmations)
@@ -169,7 +169,7 @@ contract('ForeignBridge', async (accounts) => {
     let multisigValidatorContract, twoAuthorities, ownerOfValidatorContract, foreignBridgeWithMultiSignatures
     beforeEach(async () => {
       multisigValidatorContract = await BridgeValidators.new()
-      erc20token = await StandardERC20Token.new('Test', 'TST', web3.toWei(1, "ether"));
+      erc20token = await TestToken.new('Test', 'TST', web3.toWei(1, "ether"));
       twoAuthorities = [accounts[0], accounts[1]];
       ownerOfValidatorContract = accounts[3]
       const halfEther = web3.toBigNumber(web3.toWei(0.5, "ether"));
@@ -271,7 +271,7 @@ contract('ForeignBridge', async (accounts) => {
   describe('#transferTokenToHome', async () => {
     beforeEach(async () => {
       user = accounts[4]
-      erc20token = await StandardERC20Token.new('Test', 'TST', web3.toWei(10, "ether"));
+      erc20token = await TestToken.new('Test', 'TST', web3.toWei(10, "ether"));
       foreignBridge = await ForeignBridge.new();
       await foreignBridge.initialize(validatorContract.address, oneEther, halfEther, minPerTx, gasPrice, requireBlockConfirmations);
       // Set limits for token
@@ -339,7 +339,7 @@ contract('ForeignBridge', async (accounts) => {
 
   describe('#setting limits', async () => {
     beforeEach(async () => {
-      erc20token = await StandardERC20Token.new('Test', 'TST', web3.toWei(1, "ether"));
+      erc20token = await TestToken.new('Test', 'TST', web3.toWei(1, "ether"));
       foreignBridge = await ForeignBridge.new();
       await foreignBridge.initialize(validatorContract.address, oneEther, halfEther, minPerTx, gasPrice, requireBlockConfirmations);
     })
@@ -392,7 +392,7 @@ contract('ForeignBridge', async (accounts) => {
       foreignBridge = await ForeignBridge.new();
       await foreignBridge.initialize(validatorContract.address, oneEther, halfEther, minPerTx, gasPrice, requireBlockConfirmations);
 
-      let token = await StandardERC20Token.new('Test', 'TST', halfEther);
+      let token = await TestToken.new('Test', 'TST', halfEther);
 
       await token.transfer(foreignBridge.address, halfEther);
       '0'.should.be.bignumber.equal(await token.balanceOf(owner))

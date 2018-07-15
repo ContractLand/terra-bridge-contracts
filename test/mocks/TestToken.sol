@@ -2,9 +2,9 @@ pragma solidity ^0.4.18;
 
 import "openzeppelin-solidity/contracts/token/ERC20/StandardToken.sol";
 
-contract StandardERC20Token is StandardToken {
+contract TestToken is StandardToken {
 
-  string public name = "StandardERC20Token";
+  string public name = "TestToken";
   string public symbol = "ERC20";
   uint8 public constant decimals = 18;
 
