@@ -8,7 +8,7 @@ const assert = require('assert');
 const {deployContract, sendRawTx, compareHex} = require('./deploymentUtils');
 const {web3Foreign, deploymentPrivateKey, FOREIGN_RPC_URL, PROXY_ADMIN_ADDRESS_SLOT} = require('./web3');
 
-const ERC20 = require('../../build/contracts/StandardERC20Token.json')
+const ERC20 = require('../../build/contracts/TestToken.json')
 const Proxy = require('../../build/contracts/AdminUpgradeabilityProxy.json');
 const BridgeValidators = require('../../build/contracts/BridgeValidators.json')
 const ForeignBridge = require('../../build/contracts/ForeignBridge.json')
