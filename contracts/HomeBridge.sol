@@ -107,7 +107,7 @@ contract HomeBridge is Initializable, BasicBridge {
 
             // Passing the mapped home token address here even when token address is 0x0. This is okay because
             // by default the address mapped to 0x0 will also be 0x0
-            performTransferFromForeign(homeToken, recipient, value);
+            performTransfer(homeToken, recipient, value);
             emit TransferFromForeign(homeToken, recipient, value, transactionHash);
         }
     }
@@ -160,7 +160,7 @@ contract HomeBridge is Initializable, BasicBridge {
         }
     }
 
-    function performTransferFromForeign(address token, address recipient, uint256 value) private {
+    function performTransfer(address token, address recipient, uint256 value) private {
         if (token == address(0)) {
             recipient.transfer(value);
             return;

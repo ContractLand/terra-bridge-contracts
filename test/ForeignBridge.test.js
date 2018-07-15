@@ -79,7 +79,7 @@ contract('ForeignBridge', async (accounts) => {
       // Pre-fund the bridge with some ether
       await foreignBridge.transferNativeToHome(accounts[0], {from:accounts[0], value: value})
 
-      false.should.be.equal(await foreignBridge.deposits(transactionHash))
+      false.should.be.equal(await foreignBridge.transfers(transactionHash))
       const {logs} = await foreignBridge.transferFromHome([vrs.v], [vrs.r], [vrs.s], message).should.be.fulfilled
       logs[0].event.should.be.equal("TransferFromHome")
       logs[0].args.token.should.be.equal(ADDRESS_ZERO)
@@ -89,7 +89,7 @@ contract('ForeignBridge', async (accounts) => {
 
       const balanceAfter = await web3.eth.getBalance(recipientAccount);
       balanceAfter.should.be.bignumber.equal(balanceBefore.add(value))
-      true.should.be.equal(await foreignBridge.deposits(transactionHash))
+      true.should.be.equal(await foreignBridge.transfers(transactionHash))
     })
 
     it('should allow transferFromHome of token', async () => {
@@ -101,7 +101,7 @@ contract('ForeignBridge', async (accounts) => {
       var message = createMessage(erc20token.address, recipientAccount, value, transactionHash);
       var signature = await sign(authorities[0], message)
       var vrs = signatureToVRS(signature);
-      false.should.be.equal(await foreignBridge.deposits(transactionHash))
+      false.should.be.equal(await foreignBridge.transfers(transactionHash))
       const {logs} = await foreignBridge.transferFromHome([vrs.v], [vrs.r], [vrs.s], message).should.be.fulfilled
       logs[0].event.should.be.equal("TransferFromHome")
       logs[0].args.token.should.be.equal(erc20token.address)
@@ -111,7 +111,7 @@ contract('ForeignBridge', async (accounts) => {
 
       const balanceAfter = await erc20token.balanceOf(recipientAccount);
       balanceAfter.should.be.bignumber.equal(balanceBefore.add(value))
-      true.should.be.equal(await foreignBridge.deposits(transactionHash))
+      true.should.be.equal(await foreignBridge.transfers(transactionHash))
     })
 
     it('should allow second transferFromHome with different transactionHash but same recipient and value', async ()=> {
@@ -124,14 +124,14 @@ contract('ForeignBridge', async (accounts) => {
       var message = createMessage(erc20token.address, recipientAccount, value, transactionHash);
       var signature = await sign(authorities[0], message)
       var vrs = signatureToVRS(signature);
-      false.should.be.equal(await foreignBridge.deposits(transactionHash))
+      false.should.be.equal(await foreignBridge.transfers(transactionHash))
       await foreignBridge.transferFromHome([vrs.v], [vrs.r], [vrs.s], message).should.be.fulfilled
       // tx 2
       var transactionHash2 = "0x77a496628a776a03d58d7e6059a5937f04bebd8ba4ff89f76dd4bb8ba7e291ee";
       var message2 = createMessage(erc20token.address, recipientAccount, value, transactionHash2);
       var signature2 = await sign(authorities[0], message2)
       var vrs2 = signatureToVRS(signature2);
-      false.should.be.equal(await foreignBridge.deposits(transactionHash2))
+      false.should.be.equal(await foreignBridge.transfers(transactionHash2))
       const {logs} = await foreignBridge.transferFromHome([vrs2.v], [vrs2.r], [vrs2.s], message2).should.be.fulfilled
 
       logs[0].event.should.be.equal("TransferFromHome")
@@ -141,8 +141,8 @@ contract('ForeignBridge', async (accounts) => {
       logs[0].args.transactionHash.should.be.equal(transactionHash2);
       const balanceAfter = await erc20token.balanceOf(recipientAccount)
       balanceAfter.should.be.bignumber.equal(balanceBefore.add(value.mul(2)))
-      true.should.be.equal(await foreignBridge.deposits(transactionHash))
-      true.should.be.equal(await foreignBridge.deposits(transactionHash2))
+      true.should.be.equal(await foreignBridge.transfers(transactionHash))
+      true.should.be.equal(await foreignBridge.transfers(transactionHash2))
     })
 
     it('should not allow second transferFromHome (replay attack) with same transactionHash but different recipient', async () => {
@@ -154,13 +154,13 @@ contract('ForeignBridge', async (accounts) => {
       var message = createMessage(erc20token.address, recipientAccount, value, transactionHash);
       var signature = await sign(authorities[0], message)
       var vrs = signatureToVRS(signature);
-      false.should.be.equal(await foreignBridge.deposits(transactionHash))
+      false.should.be.equal(await foreignBridge.transfers(transactionHash))
       await foreignBridge.transferFromHome([vrs.v], [vrs.r], [vrs.s], message).should.be.fulfilled
       // tx 2
       var message2 = createMessage(erc20token.address, accounts[4], value, transactionHash);
       var signature2 = await sign(authorities[0], message2)
       var vrs = signatureToVRS(signature2);
-      true.should.be.equal(await foreignBridge.deposits(transactionHash))
+      true.should.be.equal(await foreignBridge.transfers(transactionHash))
       await foreignBridge.transferFromHome([vrs.v], [vrs.r], [vrs.s], message2).should.be.rejectedWith(ERROR_MSG)
     })
   })
@@ -188,7 +188,7 @@ contract('ForeignBridge', async (accounts) => {
       var message = createMessage(erc20token.address, recipientAccount, value, transactionHash);
       var signature = await sign(twoAuthorities[0], message)
       var vrs = signatureToVRS(signature);
-      false.should.be.equal(await foreignBridgeWithMultiSignatures.deposits(transactionHash))
+      false.should.be.equal(await foreignBridgeWithMultiSignatures.transfers(transactionHash))
       await foreignBridgeWithMultiSignatures.transferFromHome([vrs.v], [vrs.r], [vrs.s], message).should.be.rejectedWith(ERROR_MSG)
       // msg 2
       var signature2 = await sign(twoAuthorities[1], message)
@@ -199,7 +199,7 @@ contract('ForeignBridge', async (accounts) => {
       logs[0].args.recipient.should.be.equal(recipientAccount)
       logs[0].args.value.should.be.bignumber.equal(value)
       logs[0].args.transactionHash.should.be.equal(transactionHash);
-      true.should.be.equal(await foreignBridgeWithMultiSignatures.deposits(transactionHash))
+      true.should.be.equal(await foreignBridgeWithMultiSignatures.transfers(transactionHash))
     })
 
     it('transferFromHome should fail if duplicate signature is provided', async () => {
@@ -210,7 +210,7 @@ contract('ForeignBridge', async (accounts) => {
       var message = createMessage(erc20token.address, recipientAccount, value, transactionHash);
       var signature = await sign(twoAuthorities[0], message)
       var vrs = signatureToVRS(signature);
-      false.should.be.equal(await foreignBridgeWithMultiSignatures.deposits(transactionHash))
+      false.should.be.equal(await foreignBridgeWithMultiSignatures.transfers(transactionHash))
       await foreignBridgeWithMultiSignatures.transferFromHome([vrs.v, vrs.v], [vrs.r, vrs.r], [vrs.s, vrs.s], message).should.be.rejectedWith(ERROR_MSG)
     })
   })

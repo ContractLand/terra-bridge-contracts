@@ -10,8 +10,8 @@ contract ForeignBridge is BasicBridge, Initializable {
     using SafeMath for uint256;
 
     /* Beginning of V1 storage variables */
-    // mapping between the deposit transaction hash from the HomeBridge to whether the deposit has been processed
-    mapping(bytes32 => bool) public deposits;
+    // mapping between the transfer transaction hash from the HomeBridge to whether the transfer has been processed
+    mapping(bytes32 => bool) public transfers;
     /* End of V1 storage variables */
 
     // Triggered when relay of transfer from HomeBridge is complete
@@ -63,14 +63,14 @@ contract ForeignBridge is BasicBridge, Initializable {
         uint256 amount;
         bytes32 txHash;
         (token, recipient, amount, txHash) = Message.parseMessage(message);
-        require(!deposits[txHash]);
-        deposits[txHash] = true;
+        require(!transfers[txHash]);
+        transfers[txHash] = true;
 
-        performDeposit(token, recipient, amount);
+        performTransfer(token, recipient, amount);
         emit TransferFromHome(token, recipient, amount, txHash);
     }
 
-    function performDeposit(address tokenAddress, address recipient, uint256 amount) private {
+    function performTransfer(address tokenAddress, address recipient, uint256 amount) private {
         if (tokenAddress == address(0)) {
             recipient.transfer(amount);
             return;
