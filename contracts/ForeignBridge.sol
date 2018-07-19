@@ -1,6 +1,6 @@
 pragma solidity ^0.4.23;
 
-import "./libraries/SafeMath.sol";
+import "zeppelin-solidity/contracts/math/SafeMath.sol";
 import "./libraries/Message.sol";
 import "./BasicBridge.sol";
 import "./interfaces/ERC20Token.sol";

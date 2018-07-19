@@ -1,7 +1,7 @@
 pragma solidity ^0.4.23;
 
 import "./interfaces/IBridgeValidators.sol";
-import "./libraries/SafeMath.sol";
+import "zeppelin-solidity/contracts/math/SafeMath.sol";
 
 contract BasicBridge {
     using SafeMath for uint256;
@@ -50,7 +50,7 @@ contract BasicBridge {
     function getCurrentDay() public view returns(uint256) {
         return now / 1 days;
     }
-    
+
     function setDailyLimit(address token, uint256 _dailyLimit) public onlyOwner {
         dailyLimit[token] = _dailyLimit;
         emit DailyLimit(token, _dailyLimit);
