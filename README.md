@@ -29,3 +29,5 @@ Responsibilities and roles of the bridge:
   `truffle develop` (make sure truffle is installed globally or use the truffle in node_modules).
   In truffle develop console, run `test`.
 
+  # Deploy
+  `npm run build-deploy`
