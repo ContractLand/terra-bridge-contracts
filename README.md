@@ -22,14 +22,14 @@ Responsibilities and roles of the bridge:
   - sends transfer requests to Home bridge in order to receive corresponding token on Foreign Bridge
   - sends transfer requests on Foreign Bridge in order to receive corresponding token on Home Bridge
   
-  # Install
-  `npm install`
-  
-  # Run Tests
-  `truffle develop` (make sure truffle is installed globally or use the truffle in node_modules).
-  In truffle develop console, run `test`.
+# Install
+`npm install`
 
-  # Deploy
-  1. `cd deployment`
-  2. Populate `.env` file in `deployment` directory according to `.env.example`
-  3. `npm run deploy`
+# Run Tests
+`truffle develop` (make sure truffle is installed globally or use the truffle in node_modules).
+In truffle develop console, run `test`.
+
+# Deploy
+1. `cd deployment`
+2. Populate `.env` file in `deployment` directory according to `.env.example`
+3. `npm run deploy`
