@@ -30,4 +30,6 @@ Responsibilities and roles of the bridge:
   In truffle develop console, run `test`.
 
   # Deploy
-  `npm run build-deploy`
+  1. `cd deployment`
+  2. Populate `.env` file in `deployment` directory according to `.env.example`
+  3. `npm run deploy`
