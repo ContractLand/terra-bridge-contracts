@@ -33,3 +33,28 @@ In truffle develop console, run `test`.
 1. `cd deployment`
 2. Populate `.env` file in `deployment` directory according to `.env.example`
 3. `npm run deploy`
+
+- The deployment script will automatically register 2 tokens. One on the Home side that represents native on Foreighn, and one on Foreign side that represents native on 
+
+# Usage
+## Registering a token in the bridge
+1. Deploy a HomeToken representation of the Foreign token. 
+2. Call `registerToken` on Home contract with `foreignTokenAddress` and `homeTokenAddress` as params
+3. Register `minPerTx`, `maxPerTx`, `dailyLimit` on both bridges for the token to non-zero values
+
+## Transfering from Foreign to Home
+- Transfer Native
+  1. Call `transferNativeToHome` on Foreign Bridge with `recipient` address for the home side as param, and `msg.value` of the transfer amount
+  
+- Transfer ERC20 Token
+  1. `approve` Foreign Bridge with allowance equal to the transfer amount
+  2. Call `transferTokenToHome` on Foreign Bridge with `token` address for the token to be transferred, `recipient` address for the home side, and transfer `value` as params
+
+## Transfering from Home to Foreign
+- Transfer Native
+  1. Call `transferNativeToForeign` on Home Bridge with `recipient` address for the foreign side as param, and `msg.value` of the transfer amount
+  
+- Transfer HomeToken (ERC827)
+  1. Call `transferTokenToHome` on Foreign Bridge with `homeToken` address for the token to be transferred, `recipient` address for the home side, and transfer `value` as params
+  - Note, because HomeTokens are ERC827, we can use `approveAndCall` function on the token to perform both the approve and call to `transferTokenToHome` in a single call
+
