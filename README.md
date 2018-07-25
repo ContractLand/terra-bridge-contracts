@@ -30,9 +30,16 @@ Responsibilities and roles of the bridge:
 In truffle develop console, run `test`.
 
 # Deploy
-1. `cd deployment`
-2. Populate `.env` file in `deployment` directory according to `.env.example`
-3. `npm run deploy`
+1. Start 2 ganache instances with the same mnemonic: 
+`yarn ganache-cli -p 8545 -m 1`
+`yarn ganache-cli -p 8546 -m 1`
+2. `cd deployment`
+3. `npm install`
+4. Populate `.env` file in `deployment` directory according to `.env.example`
+Provide `PRIVATE KEYS` without '0x' prefix
+Ensure using HTTP protocol when RPC on localhost (`HOME_RPC_URL=http://localhost:8545`)
+Validators from `VALIDATORS` variable have to be different than other accounts assigned in this file
+5. `npm run deploy` 
 
 - The deployment script will automatically register 2 tokens. One on the Home side that represents native on Foreighn, and one on Foreign side that represents native on 
 
