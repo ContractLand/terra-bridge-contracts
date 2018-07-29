@@ -79,16 +79,4 @@ contract ForeignBridge is BasicBridge, Initializable {
         ERC20Token token = ERC20Token(tokenAddress);
         require(token.transfer(recipient, amount));
     }
-
-    function claimTokens(address _token, address _to) external onlyOwner {
-        require(_to != address(0));
-        if (_token == address(0)) {
-            _to.transfer(address(this).balance);
-            return;
-        }
-
-        ERC20Token token = ERC20Token(_token);
-        uint256 balance = token.balanceOf(this);
-        require(token.transfer(_to, balance));
-    }
 }
