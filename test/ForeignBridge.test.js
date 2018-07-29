@@ -385,22 +385,4 @@ contract('ForeignBridge', async (accounts) => {
       FOREIGN_MIN_AMOUNT_PER_TX.should.be.bignumber.equal(await upgradedContract.minPerTx(ADDRESS_ZERO))
     })
   })
-
-  describe('#claimTokens', async () => {
-    it('can claim erc20', async () => {
-      const owner = accounts[0];
-      foreignBridge = await ForeignBridge.new();
-      await foreignBridge.initialize(validatorContract.address, oneEther, halfEther, minPerTx, gasPrice, requireBlockConfirmations);
-
-      let token = await TestToken.new('Test', 'TST', halfEther);
-
-      await token.transfer(foreignBridge.address, halfEther);
-      '0'.should.be.bignumber.equal(await token.balanceOf(owner))
-      halfEther.should.be.bignumber.equal(await token.balanceOf(foreignBridge.address))
-
-      await foreignBridge.claimTokens(token.address, accounts[3], {from: owner}).should.be.fulfilled;
-      '0'.should.be.bignumber.equal(await token.balanceOf(foreignBridge.address))
-      halfEther.should.be.bignumber.equal(await token.balanceOf(accounts[3]))
-    })
-  })
 })
