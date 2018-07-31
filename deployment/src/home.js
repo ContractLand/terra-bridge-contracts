@@ -33,6 +33,8 @@ const {
 
 async function deployHome(foreignTokenForHomeNative)
 {
+  assert(!VALIDATORS.includes(HOME_UPGRADEABLE_ADMIN_VALIDATORS), 'HOME_UPGRADEABLE_ADMIN_VALIDATORS cannot be a VALIDATOR');
+  assert(!VALIDATORS.includes(HOME_UPGRADEABLE_ADMIN_BRIDGE), 'HOME_UPGRADEABLE_ADMIN_BRIDGE cannot be a VALIDATOR');
   let homeNonce = await web3Home.eth.getTransactionCount(DEPLOYMENT_ACCOUNT_ADDRESS);
 
   console.log('========================================')

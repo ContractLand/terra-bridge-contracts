@@ -32,6 +32,8 @@ const {
 } = process.env;
 
 async function deployForeign() {
+  assert(!VALIDATORS.includes(FOREIGN_UPGRADEABLE_ADMIN_VALIDATORS), 'FOREIGN_UPGRADEABLE_ADMIN_VALIDATORS cannot be a VALIDATOR');
+  assert(!VALIDATORS.includes(FOREIGN_UPGRADEABLE_ADMIN_BRIDGE), 'FOREIGN_UPGRADEABLE_ADMIN_BRIDGE cannot be a VALIDATOR');
   let foreignNonce = await web3Foreign.eth.getTransactionCount(DEPLOYMENT_ACCOUNT_ADDRESS);
 
   console.log('========================================')
