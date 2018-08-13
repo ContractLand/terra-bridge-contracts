@@ -12,7 +12,7 @@ async function main() {
   console.log(`[ Foreign ] ForeignBridge: ${foreign.bridge}`)
   console.log(`[ Foreign ] ForiegnTokenForHomeNative: ${foreign.foreignTokenForHomeNative}`)
   console.log(`[   Home  ] HomeBridge: ${home.bridge}`)
-  console.log(`[   Home  ] HomeTokenForHomeNative: ${home.homeTokenForForeignNative}`)
+  console.log(`[   Home  ] HomeTokenForForeignNative: ${home.homeTokenForForeignNative}`)
   fs.writeFileSync('./bridgeDeploymentResults.json', JSON.stringify({
     home: {
       ...home,
