@@ -19,7 +19,7 @@ const HOME_GAS_PRICE =  Web3Utils.toWei(process.env.HOME_GAS_PRICE, 'gwei');
 const {
   DEPLOYMENT_ACCOUNT_ADDRESS,
   REQUIRED_NUMBER_OF_VALIDATORS,
-  HOME_OWNER_MULTISIG,
+  HOME_OWNER,
   HOME_UPGRADEABLE_ADMIN_VALIDATORS,
   HOME_UPGRADEABLE_ADMIN_BRIDGE,
   HOME_DAILY_LIMIT,
@@ -212,7 +212,7 @@ async function deployHome(foreignTokenForHomeNative)
   homeNonce++;
 
   console.log('\n[Home] transferring ownership to multisig for HomeBridge validators contract:');
-  const validatorsTransferOwnerData = await bridgeValidatorsHome.methods.transferOwnership(HOME_OWNER_MULTISIG).encodeABI();
+  const validatorsTransferOwnerData = await bridgeValidatorsHome.methods.transferOwnership(HOME_OWNER).encodeABI();
   const txValidatorsTransferOwnerData = await sendRawTx({
     data: validatorsTransferOwnerData,
     nonce: homeNonce,
@@ -222,7 +222,7 @@ async function deployHome(foreignTokenForHomeNative)
   })
   assert.equal(txValidatorsTransferOwnerData.status, '0x1', 'Transaction Failed');
   const newValidatorOwner = await bridgeValidatorsHome.methods.owner().call();
-  assert.ok(compareHex(newValidatorOwner.toLowerCase(), HOME_OWNER_MULTISIG.toLocaleLowerCase()));
+  assert.ok(compareHex(newValidatorOwner.toLowerCase(), HOME_OWNER.toLocaleLowerCase()));
   homeNonce++;
 
   console.log('\n***Home Bridge Deployment is complete***\n')

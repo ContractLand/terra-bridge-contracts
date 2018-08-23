@@ -19,7 +19,7 @@ const FOREIGN_GAS_PRICE =  Web3Utils.toWei(process.env.FOREIGN_GAS_PRICE, 'gwei'
 const {
   DEPLOYMENT_ACCOUNT_ADDRESS,
   REQUIRED_NUMBER_OF_VALIDATORS,
-  FOREIGN_OWNER_MULTISIG,
+  FOREIGN_OWNER,
   FOREIGN_UPGRADEABLE_ADMIN_VALIDATORS,
   FOREIGN_UPGRADEABLE_ADMIN_BRIDGE,
   FOREIGN_DAILY_LIMIT,
@@ -187,7 +187,7 @@ async function deployForeign() {
   foreignNonce++;
 
   console.log('\n[Foreign] transferring ownership to multisig for ForeignBridge validators contract:');
-  const validatorsTransferOwnerData = await bridgeValidatorsForeign.methods.transferOwnership(FOREIGN_OWNER_MULTISIG).encodeABI();
+  const validatorsTransferOwnerData = await bridgeValidatorsForeign.methods.transferOwnership(FOREIGN_OWNER).encodeABI();
   const txValidatorsTransferOwnerData = await sendRawTx({
     data: validatorsTransferOwnerData,
     nonce: foreignNonce,
@@ -197,7 +197,7 @@ async function deployForeign() {
   })
   assert.equal(txValidatorsTransferOwnerData.status, '0x1', 'Transaction Failed');
   const newValidatorOwner = await bridgeValidatorsForeign.methods.owner().call();
-  assert.ok(compareHex(newValidatorOwner.toLowerCase(), FOREIGN_OWNER_MULTISIG.toLocaleLowerCase()));
+  assert.ok(compareHex(newValidatorOwner.toLowerCase(), FOREIGN_OWNER.toLocaleLowerCase()));
   foreignNonce++;
 
   console.log('\n***Foreign Bridge Deployment is complete***\n')
