@@ -1,4 +1,4 @@
-pragma solidity ^0.4.23;
+pragma solidity 0.4.24;
 
 interface IBridgeValidators {
     function isValidator(address _validator) external view returns(bool);
