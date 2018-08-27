@@ -9,8 +9,9 @@ import "./interfaces/IBurnableMintableToken.sol";
 contract HomeToken is IBurnableMintableToken, ERC827Token, DetailedERC20, BurnableToken, MintableToken {
 
   constructor (string _name, string _symbol, uint8 _decimals)
+  public
   DetailedERC20(_name, _symbol, _decimals)
-  public {
+  {
 
   }
 

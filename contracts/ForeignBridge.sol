@@ -9,15 +9,21 @@ import "./migrations/Initializable.sol";
 contract ForeignBridge is BasicBridge, Initializable {
     using SafeMath for uint256;
 
-    /* Beginning of V1 storage variables */
-    // mapping between the transfer transaction hash from the HomeBridge to whether the transfer has been processed
-    mapping(bytes32 => bool) public transfers;
-    /* End of V1 storage variables */
+    /* --- EVENTS --- */
 
     // Triggered when relay of transfer from HomeBridge is complete
     event TransferFromHome(address token, address recipient, uint value, bytes32 transactionHash);
     // Event created on transfer to home.
     event TransferToHome(address token, address recipient, uint256 value);
+
+    /* --- FIELDS --- */
+
+    /* Beginning of V1 storage variables */
+    // mapping between the transfer transaction hash from the HomeBridge to whether the transfer has been processed
+    mapping(bytes32 => bool) public transfers;
+    /* End of V1 storage variables */
+
+    /* --- CONSTRUCTOR / INITIALIZATION --- */
 
     function initialize(
       address _validatorContract,
@@ -41,6 +47,8 @@ contract ForeignBridge is BasicBridge, Initializable {
         gasPrice = _foreignGasPrice;
         requiredBlockConfirmations = _requiredBlockConfirmations;
     }
+
+    /* --- EXTERNAL / PUBLIC  METHODS --- */
 
     function transferNativeToHome(address _recipient) external payable {
         require(withinLimit(address(0), msg.value));
@@ -69,6 +77,8 @@ contract ForeignBridge is BasicBridge, Initializable {
         performTransfer(token, recipient, amount);
         emit TransferFromHome(token, recipient, amount, txHash);
     }
+
+    /* --- INTERNAL / PRIVATE METHODS --- */
 
     function performTransfer(address tokenAddress, address recipient, uint256 amount) private {
         if (tokenAddress == address(0)) {
