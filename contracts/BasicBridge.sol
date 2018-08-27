@@ -8,9 +8,9 @@ contract BasicBridge {
 
     /* Beginning of V1 storage variables */
     address public validatorContractAddress;
-    uint256 public gasPrice;
-    uint256 public requiredBlockConfirmations;
-    uint256 public deployedAtBlock;
+    uint256 public gasPrice; // Used by bridge client to determine proper gas price for corresponding chain
+    uint256 public requiredBlockConfirmations; // Used by bridge client to determine proper number of blocks to wait before validating transfer
+    uint256 public deployedAtBlock; // Used by bridge client to determine initial block number to start listening for transfers
     mapping(address => uint256) public minPerTx;
     mapping(address => uint256) public maxPerTx; // Set to 0 to disable
     mapping(address => uint256) public dailyLimit; // Set to 0 to disable
