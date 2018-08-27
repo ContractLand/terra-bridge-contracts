@@ -91,23 +91,4 @@ contract('HomeToken', async (accounts) => {
       (await testMock.value()).should.be.bignumber.equal(1);
     })
   })
-
-  describe('#claimtokens', async () => {
-    it('can take send ERC20 tokens', async ()=> {
-      const owner = accounts[0];
-      const halfEther = web3.toBigNumber(web3.toWei(0.5, "ether"));
-      let tokenSecond = await HomeToken.new("Roman Token", "RST", 18);
-
-      await tokenSecond.mint(accounts[0], halfEther).should.be.fulfilled;
-      halfEther.should.be.bignumber.equal(await tokenSecond.balanceOf(accounts[0]))
-      await tokenSecond.transfer(token.address, halfEther);
-      '0'.should.be.bignumber.equal(await tokenSecond.balanceOf(accounts[0]))
-      halfEther.should.be.bignumber.equal(await tokenSecond.balanceOf(token.address))
-
-      await token.claimTokens(tokenSecond.address, accounts[3], {from: owner});
-      '0'.should.be.bignumber.equal(await tokenSecond.balanceOf(token.address))
-      halfEther.should.be.bignumber.equal(await tokenSecond.balanceOf(accounts[3]))
-
-    })
-  })
 })
