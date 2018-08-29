@@ -9,10 +9,16 @@ async function main() {
   console.log("\n**************************************************")
   console.log("          Deployment has been completed.          ")
   console.log("**************************************************\n\n")
-  console.log(`[ Foreign ] ForeignBridge: ${foreign.bridge}`)
-  console.log(`[ Foreign ] ForiegnTokenForHomeNative: ${foreign.foreignTokenForHomeNative}`)
-  console.log(`[   Home  ] HomeBridge: ${home.bridge}`)
-  console.log(`[   Home  ] HomeTokenForForeignNative: ${home.homeTokenForForeignNative}`)
+  console.log("Use following variables in your bridge client .env file:")
+  console.log(`HOME_RPC_URL=${process.env.HOME_RPC_URL}`)
+  console.log(`FOREIGN_RPC_URL=${process.env.FOREIGN_RPC_URL}`)
+  console.log(`HOME_BRIDGE_ADDRESS=${home.bridge}`)
+  console.log(`HOME_TOKEN_FOR_FOREIGN_NATIVE_ADDRESS=${home.homeTokenForForeignNative}`)
+  console.log(`FOREIGN_BRIDGE_ADDRESS=${foreign.bridge}`)
+  console.log(`FOREIGN_TOKEN_FOR_HOME_NATIVE_ADDRESS=${foreign.foreignTokenForHomeNative}`)
+  console.log(`VALIDATOR_ADDRESS=<ONE OF FOLLOWING: ${process.env.VALIDATORS}>`)
+  console.log(`VALIDATOR_ADDRESS_PRIVATE_KEY=<TYPE HERE>`)
+
   fs.writeFileSync('./bridgeDeploymentResults.json', JSON.stringify({
     home: {
       ...home,
