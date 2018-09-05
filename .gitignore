@@ -2,3 +2,4 @@ node_modules
 build
 bridgeDeploymentResults.json
 .DS_Store
+contracts/installed
