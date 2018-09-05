@@ -86,10 +86,9 @@ contract('HomeBridge', async (accounts) => {
       const recipient = accounts[2]
       const amount = 1
 
-      const tokenTransferCall = homeBridge.contract.transferTokenToForeign.getData(homeToken.address, recipient, amount)
-
       await homeToken.mint(user, amount, {from: owner }).should.be.fulfilled
-      await homeToken.transferAndCall(homeBridge.address, amount, tokenTransferCall, {from: user}).should.be.rejectedWith(ERROR_MSG)
+      await homeToken.approve(homeBridge.address, amount, {from: user}).should.be.fulfilled
+      await homeBridge.transferTokenToForeign(homeToken.address, recipient, amount, {from: user}).should.be.rejectedWith(ERROR_MSG)
     })
 
     it('should burn token on successful transfer', async () => {
@@ -98,7 +97,6 @@ contract('HomeBridge', async (accounts) => {
       const recipient = accounts[2]
       const foreignTokenAddress = '0x2222222222222222222222222222222222222222'
       const transferAmount = 1
-      const tokenTransferCall = homeBridge.contract.transferTokenToForeign.getData(homeToken.address, recipient, transferAmount)
 
       await homeToken.mint(user, transferAmount, {from: owner }).should.be.fulfilled
       const userBalanceBefore = await homeToken.balanceOf(user)
@@ -106,7 +104,8 @@ contract('HomeBridge', async (accounts) => {
       const totalSupplyBefore = await homeToken.totalSupply()
 
       await homeBridge.registerToken(foreignTokenAddress, homeToken.address).should.be.fulfilled
-      await homeToken.transferAndCall(homeBridge.address, transferAmount, tokenTransferCall, {from: user}).should.be.fulfilled
+      await homeToken.approve(homeBridge.address, transferAmount, {from: user}).should.be.fulfilled
+      await homeBridge.transferTokenToForeign(homeToken.address, recipient, transferAmount, {from: user}).should.be.fulfilled
 
       userBalanceBefore.minus(transferAmount).should.be.bignumber.equal(await homeToken.balanceOf(user))
       bridgeBalanceBefore.should.be.bignumber.equal(await homeToken.balanceOf(homeBridge.address))
@@ -121,7 +120,7 @@ contract('HomeBridge', async (accounts) => {
       const transferAmount = 1
 
       await homeToken.mint(user, transferAmount, {from: owner }).should.be.fulfilled
-      await homeToken.transfer(homeBridge.address, transferAmount, {from: user }).should.be.fulfilled
+      await homeToken.approve(homeBridge.address, transferAmount, {from: user}).should.be.fulfilled
       await homeBridge.registerToken(foreignTokenAddress, homeToken.address).should.be.fulfilled
       const {logs} = await homeBridge.transferTokenToForeign(homeToken.address, recipient, transferAmount, {from: user}).should.be.fulfilled
 
@@ -139,11 +138,11 @@ contract('HomeBridge', async (accounts) => {
       const recipient = accounts[2]
       const foreignTokenAddress = '0x2222222222222222222222222222222222222222'
       const overMaxPerTx = maxPerTx.plus(1)
-      const tokenTransferCall = homeBridge.contract.transferTokenToForeign.getData(homeToken.address, recipient, overMaxPerTx)
 
       await homeToken.mint(user, overMaxPerTx, {from: owner }).should.be.fulfilled
       await homeBridge.registerToken(foreignTokenAddress, homeToken.address).should.be.fulfilled
-      await homeToken.transferAndCall(homeBridge.address, overMaxPerTx, tokenTransferCall, {from: user}).should.be.rejectedWith(ERROR_MSG)
+      await homeToken.approve(homeBridge.address, overMaxPerTx, {from: user}).should.be.fulfilled
+      await homeBridge.transferTokenToForeign(homeToken.address, recipient, overMaxPerTx, {from: user}).should.be.rejectedWith(ERROR_MSG)
     })
 
     it('should not allow transfer under minPerTx', async() => {
@@ -152,11 +151,11 @@ contract('HomeBridge', async (accounts) => {
       const recipient = accounts[2]
       const foreignTokenAddress = '0x2222222222222222222222222222222222222222'
       const underMinPerTx = minPerTx.minus(1)
-      const tokenTransferCall = homeBridge.contract.transferTokenToForeign.getData(homeToken.address, recipient, underMinPerTx)
 
       await homeToken.mint(user, underMinPerTx, {from: owner }).should.be.fulfilled
       await homeBridge.registerToken(foreignTokenAddress, homeToken.address).should.be.fulfilled
-      await homeToken.transferAndCall(homeBridge.address, underMinPerTx, tokenTransferCall, {from: user}).should.be.rejectedWith(ERROR_MSG)
+      await homeToken.approve(homeBridge.address, underMinPerTx, {from: user}).should.be.fulfilled
+      await homeBridge.transferTokenToForeign(homeToken.address, recipient, underMinPerTx, {from: user}).should.be.rejectedWith(ERROR_MSG)
     })
 
     it('should not allow transfer over dailyLimit', async() => {
@@ -164,12 +163,13 @@ contract('HomeBridge', async (accounts) => {
       const user = accounts[1]
       const recipient = accounts[2]
       const foreignTokenAddress = '0x2222222222222222222222222222222222222222'
-      const tokenTransferCall = homeBridge.contract.transferTokenToForeign.getData(homeToken.address, recipient, maxPerTx)
 
       await homeToken.mint(user, maxPerTx.times(2), {from: owner }).should.be.fulfilled
       await homeBridge.registerToken(foreignTokenAddress, homeToken.address).should.be.fulfilled
-      await homeToken.transferAndCall(homeBridge.address, maxPerTx, tokenTransferCall, {from: user}).should.be.fulfilled
-      await homeToken.transferAndCall(homeBridge.address, maxPerTx, tokenTransferCall, {from: user}).should.be.rejectedWith(ERROR_MSG)
+      await homeToken.approve(homeBridge.address, maxPerTx, {from: user}).should.be.fulfilled
+      await homeBridge.transferTokenToForeign(homeToken.address, recipient, maxPerTx, {from: user}).should.be.fulfilled
+      await homeToken.approve(homeBridge.address, maxPerTx, {from: user}).should.be.fulfilled
+      await homeBridge.transferTokenToForeign(homeToken.address, recipient, maxPerTx, {from: user}).should.be.rejectedWith(ERROR_MSG)
     })
   })
 
