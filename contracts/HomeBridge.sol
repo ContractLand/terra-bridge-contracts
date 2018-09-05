@@ -9,8 +9,17 @@ import "./migrations/Initializable.sol";
 contract HomeBridge is Initializable, BasicBridge {
     using SafeMath for uint256;
 
-    /* Beginning of V1 storage variables */
+    /* --- EVENTS --- */
 
+    event TransferToForeign (address token, address recipient, uint256 value);
+    event TransferFromForeign (address token, address recipient, uint256 value, bytes32 transactionHash);
+    event SignedForTransferToForeign(address indexed signer, bytes32 messageHash);
+    event SignedForTransferFromForeign(address indexed signer, bytes32 transactionHash);
+    event CollectedSignatures(address authorityResponsibleForRelay, bytes32 messageHash, uint256 NumberOfCollectedSignatures);
+
+    /* --- FIELDS --- */
+
+    /* Beginning of V1 storage variables */
     // mapping between foreign token addresses to home token addresses
     mapping(address => address) public foreignToHomeTokenMap;
     // mapping between home token addresses to foreign token addresses
@@ -27,14 +36,9 @@ contract HomeBridge is Initializable, BasicBridge {
     mapping(bytes32 => bool) public messagesSigned;
     // mapping between the transfer message hash and the number of validator signatures
     mapping(bytes32 => uint256) public numMessagesSigned;
-
     /* End of V1 storage variables */
 
-    event TransferToForeign (address token, address recipient, uint256 value);
-    event TransferFromForeign (address token, address recipient, uint256 value, bytes32 transactionHash);
-    event SignedForTransferToForeign(address indexed signer, bytes32 messageHash);
-    event SignedForTransferFromForeign(address indexed signer, bytes32 transactionHash);
-    event CollectedSignatures(address authorityResponsibleForRelay, bytes32 messageHash, uint256 NumberOfCollectedSignatures);
+    /* --- CONSTRUCTOR / INITIALIZATION --- */
 
     function initialize (
         address _validatorContract,
@@ -60,6 +64,14 @@ contract HomeBridge is Initializable, BasicBridge {
         requiredBlockConfirmations = _requiredBlockConfirmations;
     }
 
+    /* --- EXTERNAL / PUBLIC  METHODS --- */
+
+    function registerToken(address foreignAddress, address homeAddress) external onlyOwner {
+        require(foreignToHomeTokenMap[foreignAddress] == address(0) && homeToForeignTokenMap[homeAddress] == address(0));
+        foreignToHomeTokenMap[foreignAddress] = homeAddress;
+        homeToForeignTokenMap[homeAddress] = foreignAddress;
+    }
+    
     function transferNativeToForeign(address recipient) external payable {
         require(withinLimit(address(0), msg.value));
         totalSpentPerDay[address(0)][getCurrentDay()] = totalSpentPerDay[address(0)][getCurrentDay()].add(msg.value);
@@ -145,10 +157,15 @@ contract HomeBridge is Initializable, BasicBridge {
         }
     }
 
-    function registerToken(address foreignAddress, address homeAddress) external onlyOwner {
-        require(foreignToHomeTokenMap[foreignAddress] == address(0) && homeToForeignTokenMap[homeAddress] == address(0));
-        foreignToHomeTokenMap[foreignAddress] = homeAddress;
-        homeToForeignTokenMap[homeAddress] = foreignAddress;
+    /* --- INTERNAL / PRIVATE METHODS --- */
+
+    function performTransfer(address token, address recipient, uint256 value) private {
+        if (token == address(0)) {
+            recipient.transfer(value);
+            return;
+        }
+
+        IBurnableMintableToken(token).mint(recipient, value);
     }
 
     function isRegisterd(address foreignToken,  address homeToken) private view returns (bool) {
@@ -158,15 +175,6 @@ contract HomeBridge is Initializable, BasicBridge {
             return (foreignToHomeTokenMap[foreignToken] == homeToken &&
                     homeToForeignTokenMap[homeToken] == foreignToken);
         }
-    }
-
-    function performTransfer(address token, address recipient, uint256 value) private {
-        if (token == address(0)) {
-            recipient.transfer(value);
-            return;
-        }
-
-        IBurnableMintableToken(token).mint(recipient, value);
     }
 
     function signature(bytes32 _hash, uint256 _index) public view returns (bytes) {

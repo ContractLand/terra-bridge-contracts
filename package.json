@@ -6,6 +6,7 @@
     "test": "test"
   },
   "scripts": {
+    "postinstall": "chmod +x install-deps.sh && ./install-deps.sh",
     "build": "npm run clear-build && truffle compile",
     "deploy": "node deployment/deploy.js",
     "build-deploy": "npm run build && npm run deploy",
@@ -18,11 +19,10 @@
     "chai": "^4.1.2",
     "chai-as-promised": "^7.1.1",
     "chai-bignumber": "^2.0.2",
-    "openzeppelin-solidity": "1.10.0",
+    "openzeppelin-solidity": "1.12.0",
     "truffle": "^4.1.13",
     "web3-utils": "^1.0.0-beta.34",
-    "zeppelin-solidity": "1.10.0",
-    "zos-lib": "^1.0.0"
+    "zos-lib": "1.4.0"
   },
   "devDependencies": {
     "ganache-cli": "^6.1.6"

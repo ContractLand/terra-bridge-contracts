@@ -7,15 +7,21 @@ import "./migrations/Initializable.sol";
 contract BridgeValidators is Ownable, Initializable {
     using SafeMath for uint256;
 
+    /* --- EVENTS --- */
+
+    event ValidatorAdded (address validator);
+    event ValidatorRemoved (address validator);
+    event RequiredSignaturesChanged (uint256 requiredSignatures);
+
+    /* --- FIELDS --- */
+
     /* Beginning of V1 storage variables */
     mapping(address => bool) internal validators;
     uint256 public validatorCount;
     uint256 public requiredSignatures;
     /* End of V1 storage variables */
 
-    event ValidatorAdded (address validator);
-    event ValidatorRemoved (address validator);
-    event RequiredSignaturesChanged (uint256 requiredSignatures);
+    /* --- CONSTRUCTOR / INITIALIZATION --- */
 
     function initialize(uint256 _requiredSignatures, address[] _initialValidators, address _owner)
       public isInitializer
@@ -34,10 +40,7 @@ contract BridgeValidators is Ownable, Initializable {
         requiredSignatures = _requiredSignatures;
     }
 
-    function setOwner(address _owner) private {
-        require(_owner != address(0));
-        owner = _owner;
-    }
+    /* --- EXTERNAL / PUBLIC  METHODS --- */
 
     function addValidator(address _validator) external onlyOwner {
         require(_validator != address(0));
@@ -64,5 +67,12 @@ contract BridgeValidators is Ownable, Initializable {
 
     function isValidator(address _validator) public view returns(bool) {
         return validators[_validator] == true;
+    }
+
+    /* --- INTERNAL / PRIVATE METHODS --- */
+    
+    function setOwner(address _owner) private {
+        require(_owner != address(0));
+        owner = _owner;
     }
 }
