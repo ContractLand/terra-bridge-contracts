@@ -1,5 +1,6 @@
 const HomeToken = artifacts.require("HomeToken.sol");
 const TransferAndCallTest = artifacts.require("TransferAndCallTest.sol");
+const ApproveAndCallTest = artifacts.require("ApproveAndCallTest.sol");
 const {ERROR_MSG} = require('./helpers/setup');
 
 contract('HomeToken', async (accounts) => {
@@ -85,6 +86,25 @@ contract('HomeToken', async (accounts) => {
 
       await token.mint(user, 1, {from: owner }).should.be.fulfilled;
       await token.transferAndCall(testMock.address, 1, callDoSomething123, {from: user}).should.be.fulfilled;
+      (await token.balanceOf(testMock.address)).should.be.bignumber.equal(1);
+      (await token.balanceOf(user)).should.be.bignumber.equal(0);
+      (await testMock.from()).should.be.equal(user);
+      (await testMock.value()).should.be.bignumber.equal(1);
+    })
+  })
+
+  describe.only('#approveAndCall', () => {
+    it('can approve and call', async () => {
+      const testMock = await ApproveAndCallTest.new();
+      (await testMock.from()).should.be.equal('0x0000000000000000000000000000000000000000');
+      (await testMock.value()).should.be.bignumber.equal('0');
+
+      var testMockWeb3 = web3.eth.contract(ApproveAndCallTest.abi);
+      var testMockInstance = testMockWeb3.at(testMock.address);
+      var callDoSomething123 = testMockInstance.doSomething.getData(token.address, user, 1);
+
+      await token.mint(user, 1, {from: owner }).should.be.fulfilled;
+      await token.approveAndCall(testMock.address, 1, callDoSomething123, {from: user}).should.be.fulfilled;
       (await token.balanceOf(testMock.address)).should.be.bignumber.equal(1);
       (await token.balanceOf(user)).should.be.bignumber.equal(0);
       (await testMock.from()).should.be.equal(user);
