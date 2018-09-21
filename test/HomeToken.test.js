@@ -93,7 +93,7 @@ contract('HomeToken', async (accounts) => {
     })
   })
 
-  describe.only('#approveAndCall', () => {
+  describe('#approveAndCall', () => {
     it('can approve and call', async () => {
       const testMock = await ApproveAndCallTest.new();
       (await testMock.from()).should.be.equal('0x0000000000000000000000000000000000000000');
