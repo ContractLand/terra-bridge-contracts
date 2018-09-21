@@ -5,7 +5,6 @@ import "./libraries/Message.sol";
 import "./interfaces/IBurnableMintableToken.sol";
 import "./BasicBridge.sol";
 import "./migrations/Initializable.sol";
-import "./interfaces/ERC20Token.sol";
 
 contract HomeBridge is Initializable, BasicBridge {
     using SafeMath for uint256;
@@ -90,7 +89,6 @@ contract HomeBridge is Initializable, BasicBridge {
         address foreignToken = homeToForeignTokenMap[homeToken];
         require(foreignToHomeTokenMap[foreignToken] == homeToken);
 
-        require(ERC20Token(homeToken).transferFrom(msg.sender, this, value));
         IBurnableMintableToken(homeToken).burn(value);
         emit TransferToForeign(foreignToken, recipient, value);
     }
