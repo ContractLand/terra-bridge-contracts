@@ -3,3 +3,4 @@ build
 bridgeDeploymentResults.json
 .DS_Store
 contracts/installed
+flats/
