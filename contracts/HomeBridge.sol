@@ -50,10 +50,10 @@ contract HomeBridge is Initializable, BasicBridge {
     ) public
       isInitializer
     {
-        require(_validatorContract != address(0));
-        require(_homeGasPrice > 0);
-        require(_requiredBlockConfirmations > 0);
-        require(_minPerTx > 0 && _maxPerTx > _minPerTx && _dailyLimit > _maxPerTx);
+        require(_validatorContract != address(0), "Validator contract address cannot be 0x0");
+        require(_homeGasPrice > 0, "HomeGasPrice should be greater than 0");
+        require(_requiredBlockConfirmations > 0, "RequiredBlockConfirmations should be greater than 0");
+        require(_minPerTx > 0 && _maxPerTx > _minPerTx && _dailyLimit > _maxPerTx, "Tx limits initialization error");
 
         validatorContractAddress = _validatorContract;
         deployedAtBlock = block.number;
@@ -67,27 +67,29 @@ contract HomeBridge is Initializable, BasicBridge {
     /* --- EXTERNAL / PUBLIC  METHODS --- */
 
     function registerToken(address foreignAddress, address homeAddress) external onlyOwner {
-        require(foreignToHomeTokenMap[foreignAddress] == address(0) && homeToForeignTokenMap[homeAddress] == address(0));
+        require(foreignToHomeTokenMap[foreignAddress] == address(0) &&
+                homeToForeignTokenMap[homeAddress] == address(0)
+                , "Token already registered");
         foreignToHomeTokenMap[foreignAddress] = homeAddress;
         homeToForeignTokenMap[homeAddress] = foreignAddress;
     }
-    
+
     function transferNativeToForeign(address recipient) external payable {
-        require(withinLimit(address(0), msg.value));
+        require(withinLimit(address(0), msg.value), "Transfer exceeds limit");
         totalSpentPerDay[address(0)][getCurrentDay()] = totalSpentPerDay[address(0)][getCurrentDay()].add(msg.value);
 
         address foreignToken = homeToForeignTokenMap[address(0)];
-        require(foreignToken != address(0));
+        require(foreignToken != address(0), "Foreign native token address is not 0x0");
 
         emit TransferToForeign(foreignToken, recipient, msg.value);
     }
 
     function transferTokenToForeign(address homeToken, address recipient, uint256 value) external {
-        require(withinLimit(homeToken, value));
+        require(withinLimit(homeToken, value), "Transfer exceeds limit");
         totalSpentPerDay[homeToken][getCurrentDay()] = totalSpentPerDay[homeToken][getCurrentDay()].add(value);
 
         address foreignToken = homeToForeignTokenMap[homeToken];
-        require(foreignToHomeTokenMap[foreignToken] == homeToken);
+        require(foreignToHomeTokenMap[foreignToken] == homeToken, "Incorrect token address mapping");
 
         IBurnableMintableToken(homeToken).burn(value);
         emit TransferToForeign(foreignToken, recipient, value);
@@ -95,16 +97,16 @@ contract HomeBridge is Initializable, BasicBridge {
 
     function transferFromForeign(address foreignToken, address recipient, uint256 value, bytes32 transactionHash) external onlyValidator {
         address homeToken = foreignToHomeTokenMap[foreignToken];
-        require(isRegisterd(foreignToken, homeToken));
+        require(isRegisterd(foreignToken, homeToken), "Token not registered");
 
         bytes32 hashMsg = keccak256(abi.encodePacked(homeToken, recipient, value, transactionHash));
         bytes32 hashSender = keccak256(abi.encodePacked(msg.sender, hashMsg));
         // Duplicated transfers
-        require(!transfersSigned[hashSender]);
+        require(!transfersSigned[hashSender], "Transfer already signed by this validator");
         transfersSigned[hashSender] = true;
 
         uint256 signed = numTransfersSigned[hashMsg];
-        require(!isAlreadyProcessed(signed));
+        require(!isAlreadyProcessed(signed), "Transfer already processed");
         // the check above assumes that the case when the value could be overflew will not happen in the addition operation below
         signed = signed + 1;
 
@@ -126,18 +128,18 @@ contract HomeBridge is Initializable, BasicBridge {
 
     function submitSignature(bytes signature, bytes message) external onlyValidator {
         // ensure that `signature` is really `message` signed by `msg.sender`
-        require(Message.isMessageValid(message));
-        require(msg.sender == Message.recoverAddressFromSignedMessage(signature, message));
+        require(Message.isMessageValid(message), "Invalid message format");
+        require(msg.sender == Message.recoverAddressFromSignedMessage(signature, message), "Sender is not signer of message");
         bytes32 hashMsg = keccak256(message);
         bytes32 hashSender = keccak256(abi.encodePacked(msg.sender, hashMsg));
 
         uint256 signed = numMessagesSigned[hashMsg];
-        require(!isAlreadyProcessed(signed));
+        require(!isAlreadyProcessed(signed), "Transfer already processed");
         // the check above assumes that the case when the value could be overflew will not happen in the addition operation below
         signed = signed + 1;
         if (signed > 1) {
             // Duplicated signatures
-            require(!messagesSigned[hashSender]);
+            require(!messagesSigned[hashSender], "Message already signed by this validator");
         } else {
             messages[hashMsg] = message;
         }

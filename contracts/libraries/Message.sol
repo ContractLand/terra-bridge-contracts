@@ -34,7 +34,7 @@ library Message {
         pure
         returns(address token, address recipient, uint256 amount, bytes32 txHash)
     {
-        require(isMessageValid(message));
+        require(isMessageValid(message), "Incorrect message format");
         assembly {
             token := and(mload(add(message, 20)), 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
             recipient := and(mload(add(message, 40)), 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
@@ -52,7 +52,7 @@ library Message {
     }
 
     function recoverAddressFromSignedMessage(bytes signature, bytes message) internal pure returns (address) {
-        require(signature.length == 65);
+        require(signature.length == 65, "Incorrect signature length");
         bytes32 r;
         bytes32 s;
         bytes1 v;
@@ -78,15 +78,15 @@ library Message {
         bytes32[] _rs,
         bytes32[] _ss,
         IBridgeValidators _validatorContract) internal view {
-        require(isMessageValid(_message));
+        require(isMessageValid(_message), "Invalid message format");
         uint256 requiredSignatures = _validatorContract.requiredSignatures();
-        require(_vs.length >= requiredSignatures);
+        require(_vs.length >= requiredSignatures, "Num of signatures in message is less than requiredSignatures");
         bytes32 hash = hashMessage(_message);
         address[] memory encounteredAddresses = new address[](requiredSignatures);
 
         for (uint256 i = 0; i < requiredSignatures; i++) {
             address recoveredAddress = ecrecover(hash, _vs[i], _rs[i], _ss[i]);
-            require(_validatorContract.isValidator(recoveredAddress));
+            require(_validatorContract.isValidator(recoveredAddress), "Signer of message is not a validator");
             if (addressArrayContains(encounteredAddresses, recoveredAddress)) {
                 revert();
             }

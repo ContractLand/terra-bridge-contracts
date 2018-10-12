@@ -15,12 +15,12 @@ contract BasicBridge {
     /* --- MODIFIERs --- */
 
     modifier onlyValidator() {
-        require(validatorContract().isValidator(msg.sender));
+        require(validatorContract().isValidator(msg.sender), "Sender is not a validator");
         _;
     }
 
     modifier onlyOwner() {
-        require(validatorContract().owner() == msg.sender);
+        require(validatorContract().owner() == msg.sender, "Sender is not owner");
         _;
     }
 
@@ -40,23 +40,23 @@ contract BasicBridge {
     /* --- EXTERNAL / PUBLIC  METHODS --- */
 
     function setMaxPerTx(address token, uint256 _maxPerTx) external onlyOwner {
-        require(_maxPerTx < dailyLimit[token]);
+        require(_maxPerTx < dailyLimit[token], "Error setting maxPerTx");
         maxPerTx[token] = _maxPerTx;
     }
 
     function setMinPerTx(address token, uint256 _minPerTx) external onlyOwner {
-        require(_minPerTx < dailyLimit[token] && _minPerTx < maxPerTx[token]);
+        require(_minPerTx < dailyLimit[token] && _minPerTx < maxPerTx[token], "Error setting minPerTx");
         minPerTx[token] = _minPerTx;
     }
 
     function setGasPrice(uint256 _gasPrice) external onlyOwner {
-        require(_gasPrice > 0);
+        require(_gasPrice > 0, "Error setting gasPrice");
         gasPrice = _gasPrice;
         emit GasPriceChanged(_gasPrice);
     }
 
     function setRequiredBlockConfirmations(uint256 _blockConfirmations) external onlyOwner {
-        require(_blockConfirmations > 0);
+        require(_blockConfirmations > 0, "Error setting blockConfirmations");
         requiredBlockConfirmations = _blockConfirmations;
         emit RequiredBlockConfirmationChanged(_blockConfirmations);
     }
