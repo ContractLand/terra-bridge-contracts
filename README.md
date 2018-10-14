@@ -43,6 +43,7 @@ In truffle develop console, run `test`.
     * Ensure using HTTP protocol when RPC on localhost (e.g. `HOME_RPC_URL=http://localhost:8545`)
     * Validators from `VALIDATORS` variable have to be different than other accounts assigned in this file (i.e. `FOREIGN_UPGRADEABLE_ADMIN_VALIDATORS`, `FOREIGN_UPGRADEABLE_ADMIN_BRIDGE`, `FOREIGN_OWNER`)
 6. `npm run deploy`
+7. `.env.example` is configed to connect to 2 local chains listening on `8545` and `8546`, with mnemonic of `crawl fade put couch jewel wine basket million license indoor push sniff`.
 
 - The deployment script will automatically register 2 tokens. One on the Home side that represents native on Foreighn, and one on Foreign side that represents native on
 
