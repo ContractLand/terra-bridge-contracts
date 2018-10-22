@@ -195,4 +195,7 @@ contract HomeBridge is Initializable, BasicBridge {
     function isAlreadyProcessed(uint256 _number) public pure returns(bool) {
         return _number & 2**255 == 2**255;
     }
+
+    function topUp() external payable onlyOwner {
+    }
 }

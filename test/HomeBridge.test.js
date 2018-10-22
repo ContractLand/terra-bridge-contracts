@@ -21,6 +21,7 @@ contract('HomeBridge', async (accounts) => {
     owner = accounts[0]
     await validatorContract.initialize(1, authorities, owner, { from: owner })
   })
+
   describe('#initialize', async() => {
     beforeEach(async () => {
       homeContract = await HomeBridge.new()
@@ -46,7 +47,6 @@ contract('HomeBridge', async (accounts) => {
       await homeContract.initialize(validatorContract.address, '3', '2', '2', gasPrice, requireBlockConfirmations).should.be.rejectedWith(ERROR_MSG);
       false.should.be.equal(await homeContract.initialized())
     })
-
     it('can be upgraded via proxy', async () => {
       // Create v1 of bridge using bridge
       const proxyOwner = accounts[1]
@@ -178,6 +178,24 @@ contract('HomeBridge', async (accounts) => {
       homeContract = await HomeBridge.new()
       await homeContract.initialize(validatorContract.address, '3', '2', '1', gasPrice, requireBlockConfirmations)
     })
+
+    it('fails if not from owner', async () => {
+      await homeContract.topUp({
+        from: accounts[1],
+        value: halfEther
+      }).should.be.rejectedWith(ERROR_MSG)
+    });
+
+    it('can be topped up', async () => {
+      const homeBalanceBefore = await web3.eth.getBalance(homeContract.address);
+      "0".should.be.bignumber.equal(homeBalanceBefore);
+      await homeContract.topUp({
+        from: accounts[0],
+        value: halfEther
+      }).should.be.fulfilled
+      const homeBalanceAfter = await web3.eth.getBalance(homeContract.address);
+      "500000000000000000".should.be.bignumber.equal(homeBalanceAfter);
+    });
 
     it('should not allow transfer if home native-token is not mapped to a token on foreign', async () => {
       const user = accounts[1]
