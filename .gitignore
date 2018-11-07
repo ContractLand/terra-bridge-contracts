@@ -4,3 +4,5 @@ bridgeDeploymentResults.json
 .DS_Store
 contracts/installed
 flats/
+coverage.json
+coverage/

@@ -26,8 +26,12 @@ Responsibilities and roles of the bridge:
 `npm install`
 
 # Run Tests
-`truffle develop` (make sure truffle is installed globally or use the truffle in node_modules).
-In truffle develop console, run `test`.
+
+`npm run test` (make sure truffle is installed globally or use the truffle in node_modules).
+
+# Generate coverage report
+
+`npm run cov` (make sure truffle is installed globally or use the truffle in node_modules).
 
 # Deploy
 1. Build contracts:

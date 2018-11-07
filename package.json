@@ -11,7 +11,9 @@
     "deploy": "node deployment/deploy.js",
     "build-deploy": "npm run build && npm run deploy",
     "clear-build": "rm -rf build",
-    "test": "truffle develop",
+    "develop": "truffle develop",
+    "test": "sh scripts/tests.sh",
+    "cov": "sh scripts/coverage.sh",
     "flatten": "chmod +x ./scripts/flatten.sh && cd scripts && ./flatten.sh"
   },
   "author": "Peter He",
@@ -27,6 +29,7 @@
   },
   "devDependencies": {
     "ganache-cli": "^6.1.6",
-    "truffle-flattener": "^1.2.3"
+    "truffle-flattener": "^1.2.3",
+    "solidity-coverage": "^0.5.11"
   }
 }
