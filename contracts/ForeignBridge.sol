@@ -12,7 +12,7 @@ contract ForeignBridge is BasicBridge, Initializable {
     /* --- EVENTS --- */
 
     // Triggered when relay of transfer from HomeBridge is complete
-    event TransferFromHome(address token, address recipient, uint value, bytes32 transactionHash);
+    event TransferFromHome(address token, address recipient, uint value, bytes32 indexed transactionHash);
     // Event created on transfer to home.
     event TransferToHome(address token, address recipient, uint256 value);
 
