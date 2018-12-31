@@ -11,8 +11,8 @@ contract HomeBridge is Initializable, BasicBridge {
 
     /* --- EVENTS --- */
 
-    event TransferToForeign (address token, address recipient, uint256 value);
-    event TransferFromForeign (address token, address recipient, uint256 value, bytes32 transactionHash);
+    event TransferToForeign (address indexed token, address recipient, uint256 value);
+    event TransferFromForeign (address indexed token, address recipient, uint256 value, bytes32 transactionHash);
     event SignedForTransferToForeign(address indexed signer, bytes32 messageHash);
     event SignedForTransferFromForeign(address indexed signer, bytes32 transactionHash);
     event CollectedSignatures(address authorityResponsibleForRelay, bytes32 messageHash, uint256 NumberOfCollectedSignatures);
