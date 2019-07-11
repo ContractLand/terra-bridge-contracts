@@ -62,6 +62,7 @@ contract('ForeignBridge', async (accounts) => {
     beforeEach(async () => {
       foreignBridge = await ForeignBridge.new()
       erc20token = await TestToken.new('Test', 'TST', web3.toWei(1, "ether"), 18)
+      decimal6Token = await TestToken.new('Test6', 'TST', 10000000, 6); // 10 units
       const oneEther = web3.toBigNumber(web3.toWei(1, "ether"))
       const halfEther = web3.toBigNumber(web3.toWei(0.5, "ether"))
       await foreignBridge.initialize(validatorContract.address, oneEther, halfEther, minPerTx, gasPrice, requireBlockConfirmations)
@@ -162,6 +163,29 @@ contract('ForeignBridge', async (accounts) => {
       var vrs = signatureToVRS(signature2);
       true.should.be.equal(await foreignBridge.transfers(transactionHash))
       await foreignBridge.transferFromHome([vrs.v], [vrs.r], [vrs.s], message2).should.be.rejectedWith(ERROR_MSG)
+    })
+
+    it('should cast down from 18 to proper decimal places', async () => {
+      var recipientAccount = accounts[3];
+      const balanceBefore = await decimal6Token.balanceOf(recipientAccount)
+      var decimal6TokenValue = 250000; // 0.25 decimal6Token unit
+      var actualTransferValue = web3.toBigNumber(web3.toWei(0.25, "ether"));
+      await decimal6Token.transfer(foreignBridge.address, decimal6TokenValue)
+      var transactionHash = "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80";
+      var message = createMessage(decimal6Token.address, recipientAccount, actualTransferValue, transactionHash);
+      var signature = await sign(authorities[0], message)
+      var vrs = signatureToVRS(signature);
+      false.should.be.equal(await foreignBridge.transfers(transactionHash))
+      const {logs} = await foreignBridge.transferFromHome([vrs.v], [vrs.r], [vrs.s], message).should.be.fulfilled
+      logs[0].event.should.be.equal("TransferFromHome")
+      logs[0].args.token.should.be.equal(decimal6Token.address)
+      logs[0].args.recipient.should.be.equal(recipientAccount)
+      logs[0].args.value.should.be.bignumber.equal(decimal6TokenValue)
+      logs[0].args.transactionHash.should.be.equal(transactionHash);
+
+      const balanceAfter = await decimal6Token.balanceOf(recipientAccount);
+      balanceAfter.should.be.bignumber.equal(balanceBefore.add(decimal6TokenValue))
+      true.should.be.equal(await foreignBridge.transfers(transactionHash))
     })
   })
 
