@@ -57,11 +57,12 @@ contract ForeignBridge is BasicBridge, Initializable {
     }
 
     function transferTokenToHome(address _token, address _recipient, uint256 _value) external {
-        require(withinLimit(_token, _value), "Transfer exceeds limit");
-        totalSpentPerDay[_token][getCurrentDay()] = totalSpentPerDay[_token][getCurrentDay()].add(_value);
+        uint256 castValue18 = castDecimalTo18(_token, _value);
+        require(withinLimit(_token, castValue18), "Transfer exceeds limit");
+        totalSpentPerDay[_token][getCurrentDay()] = totalSpentPerDay[_token][getCurrentDay()].add(castValue18);
 
         require(ERC20Token(_token).transferFrom(msg.sender, this, _value), "TransferFrom failed for ERC20 Token");
-        emit TransferToHome(_token, _recipient, _value);
+        emit TransferToHome(_token, _recipient, castValue18);
     }
 
     function transferFromHome(uint8[] vs, bytes32[] rs, bytes32[] ss, bytes message) external {
@@ -88,5 +89,17 @@ contract ForeignBridge is BasicBridge, Initializable {
 
         ERC20Token token = ERC20Token(tokenAddress);
         require(token.transfer(recipient, amount), "Transfer failed for ERC20 token");
+    }
+
+    function castDecimalTo18(address token, uint256 value) private returns (uint256) {
+        require(ERC20Token(token).decimals() > 0 && ERC20Token(token).decimals() <= 18);
+
+        if (ERC20Token(token).decimals() < 18) {
+            uint256 decimals = uint256(ERC20Token(token).decimals()); // cast to uint256
+            uint256 multiplier = 10**(18 - decimals);
+            return value * multiplier;
+        }
+
+        return value;
     }
 }

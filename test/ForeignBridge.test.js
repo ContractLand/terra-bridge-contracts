@@ -61,7 +61,7 @@ contract('ForeignBridge', async (accounts) => {
   describe('#transferFromHome', async () => {
     beforeEach(async () => {
       foreignBridge = await ForeignBridge.new()
-      erc20token = await TestToken.new('Test', 'TST', web3.toWei(1, "ether"))
+      erc20token = await TestToken.new('Test', 'TST', web3.toWei(1, "ether"), 18)
       const oneEther = web3.toBigNumber(web3.toWei(1, "ether"))
       const halfEther = web3.toBigNumber(web3.toWei(0.5, "ether"))
       await foreignBridge.initialize(validatorContract.address, oneEther, halfEther, minPerTx, gasPrice, requireBlockConfirmations)
@@ -169,7 +169,7 @@ contract('ForeignBridge', async (accounts) => {
     let multisigValidatorContract, twoAuthorities, ownerOfValidatorContract, foreignBridgeWithMultiSignatures
     beforeEach(async () => {
       multisigValidatorContract = await BridgeValidators.new()
-      erc20token = await TestToken.new('Test', 'TST', web3.toWei(1, "ether"));
+      erc20token = await TestToken.new('Test', 'TST', web3.toWei(1, "ether"), 18);
       twoAuthorities = [accounts[0], accounts[1]];
       ownerOfValidatorContract = accounts[3]
       const halfEther = web3.toBigNumber(web3.toWei(0.5, "ether"));
@@ -271,13 +271,23 @@ contract('ForeignBridge', async (accounts) => {
   describe('#transferTokenToHome', async () => {
     beforeEach(async () => {
       user = accounts[4]
-      erc20token = await TestToken.new('Test', 'TST', web3.toWei(10, "ether"));
+      erc20token = await TestToken.new('Test', 'TST', web3.toWei(10, "ether"), 18);
+      decimal6Token = await TestToken.new('Test6', 'TST', 10000000, 6); // 10 units
+      decimal20Token = await TestToken.new('Test6', 'TST', 1000000000000000000000, 20); // 10 units
       foreignBridge = await ForeignBridge.new();
       await foreignBridge.initialize(validatorContract.address, oneEther, halfEther, minPerTx, gasPrice, requireBlockConfirmations);
       // Set limits for token
       foreignBridge.setDailyLimit(erc20token.address, oneEther).should.be.fulfilled
       foreignBridge.setMaxPerTx(erc20token.address, halfEther).should.be.fulfilled
       foreignBridge.setMinPerTx(erc20token.address, minPerTx).should.be.fulfilled
+
+      foreignBridge.setDailyLimit(decimal6Token.address, oneEther).should.be.fulfilled
+      foreignBridge.setMaxPerTx(decimal6Token.address, halfEther).should.be.fulfilled
+      foreignBridge.setMinPerTx(decimal6Token.address, minPerTx).should.be.fulfilled
+
+      foreignBridge.setDailyLimit(decimal20Token.address, oneEther).should.be.fulfilled
+      foreignBridge.setMaxPerTx(decimal20Token.address, halfEther).should.be.fulfilled
+      foreignBridge.setMinPerTx(decimal20Token.address, minPerTx).should.be.fulfilled
 
       oneEther.should.be.bignumber.equal(await foreignBridge.dailyLimit(ADDRESS_ZERO))
       oneEther.should.be.bignumber.equal(await foreignBridge.dailyLimit(erc20token.address))
@@ -335,11 +345,34 @@ contract('ForeignBridge', async (accounts) => {
       await foreignBridge.transferTokenToHome(erc20token.address, user, minPerTx, {from: user}).should.be.fulfilled;
       oneEther.sub(minPerTx).should.be.bignumber.equal(await erc20token.balanceOf(user));
     })
+
+    it("should cast up to 18 decimal place", async () => {
+      const decimal6Amount = 500000 // 0.5 decimal6Token unit
+      await decimal6Token.transfer(user, decimal6Amount).should.be.fulfilled
+      await decimal6Token.approve(foreignBridge.address, decimal6Amount, {from: user}).should.be.fulfilled
+
+      await foreignBridge.transferTokenToHome(decimal6Token.address, user, decimal6Amount, {from: user}).should.be.fulfilled;
+      '0'.should.be.bignumber.equal(await decimal6Token.balanceOf(user));
+      const events = await getEvents(foreignBridge, {event: 'TransferToHome'});
+      events[0].args.should.be.deep.equal({
+        token: decimal6Token.address,
+        recipient: user,
+        value: halfEther // should transfer 0.5 ether of tokens to home
+      })
+    })
+
+    it("should not allow decimal greater than 18", async () => {
+      const decimal20Amount = 50000000000000000000 // 0.5 decimal20Token unit
+      await decimal20Token.transfer(user, decimal20Amount).should.be.fulfilled
+      await decimal20Token.approve(foreignBridge.address, decimal20Amount, {from: user}).should.be.fulfilled
+
+      await foreignBridge.transferTokenToHome(decimal20Token.address, user, decimal20Amount, {from: user}).should.be.rejectedWith(ERROR_MSG);
+    })
   })
 
   describe('#setting limits', async () => {
     beforeEach(async () => {
-      erc20token = await TestToken.new('Test', 'TST', web3.toWei(1, "ether"));
+      erc20token = await TestToken.new('Test', 'TST', web3.toWei(1, "ether"), 18);
       foreignBridge = await ForeignBridge.new();
       await foreignBridge.initialize(validatorContract.address, oneEther, halfEther, minPerTx, gasPrice, requireBlockConfirmations);
     })
