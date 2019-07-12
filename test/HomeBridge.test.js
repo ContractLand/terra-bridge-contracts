@@ -182,9 +182,8 @@ contract('HomeBridge', async (accounts) => {
     it('can be topped up', async () => {
       const homeBalanceBefore = await web3.eth.getBalance(homeContract.address);
       "0".should.be.bignumber.equal(homeBalanceBefore);
-      await homeContract.topUp({
-        from: accounts[0],
-        value: halfEther
+      await homeContract.send(halfEther, {
+        from: accounts[0]
       }).should.be.fulfilled
       const homeBalanceAfter = await web3.eth.getBalance(homeContract.address);
       "500000000000000000".should.be.bignumber.equal(homeBalanceAfter);

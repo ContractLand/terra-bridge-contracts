@@ -6,14 +6,13 @@ contract TestToken is StandardToken {
 
   string public name = "TestToken";
   string public symbol = "ERC20";
-  uint8 public constant decimals = 18;
+  uint8 public decimals = 18;
 
-  uint256 public constant INITIAL_SUPPLY = 1000000 * (10 ** uint256(decimals));
-
-  constructor(string _name, string _symbol, uint256 _initialSupply) public {
+  constructor(string _name, string _symbol, uint256 _initialSupply, uint8 _decimals) public {
     name = _name;
     symbol = _symbol;
     totalSupply_ = _initialSupply;
     balances[msg.sender] = _initialSupply;
+    decimals = _decimals;
   }
 }

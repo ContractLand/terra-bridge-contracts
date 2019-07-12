@@ -57,11 +57,12 @@ contract ForeignBridge is BasicBridge, Initializable {
     }
 
     function transferTokenToHome(address _token, address _recipient, uint256 _value) external {
-        require(withinLimit(_token, _value), "Transfer exceeds limit");
-        totalSpentPerDay[_token][getCurrentDay()] = totalSpentPerDay[_token][getCurrentDay()].add(_value);
+        uint256 castValue18 = castTo18Decimal(_token, _value);
+        require(withinLimit(_token, castValue18), "Transfer exceeds limit");
+        totalSpentPerDay[_token][getCurrentDay()] = totalSpentPerDay[_token][getCurrentDay()].add(castValue18);
 
         require(ERC20Token(_token).transferFrom(msg.sender, this, _value), "TransferFrom failed for ERC20 Token");
-        emit TransferToHome(_token, _recipient, _value);
+        emit TransferToHome(_token, _recipient, castValue18);
     }
 
     function transferFromHome(uint8[] vs, bytes32[] rs, bytes32[] ss, bytes message) external {
@@ -74,8 +75,9 @@ contract ForeignBridge is BasicBridge, Initializable {
         require(!transfers[txHash], "Transfer already processed");
         transfers[txHash] = true;
 
-        performTransfer(token, recipient, amount);
-        emit TransferFromHome(token, recipient, amount, txHash);
+        uint256 castedAmount = castFrom18Decimal(token, amount);
+        performTransfer(token, recipient, castedAmount);
+        emit TransferFromHome(token, recipient, castedAmount, txHash);
     }
 
     /* --- INTERNAL / PRIVATE METHODS --- */
@@ -88,5 +90,28 @@ contract ForeignBridge is BasicBridge, Initializable {
 
         ERC20Token token = ERC20Token(tokenAddress);
         require(token.transfer(recipient, amount), "Transfer failed for ERC20 token");
+    }
+
+    function castTo18Decimal(address token, uint256 value) private returns (uint256) {
+        return value.mul(getCastScale(token, value));
+    }
+
+    function castFrom18Decimal(address token, uint256 value) private returns (uint256) {
+        if (token == address(0)) {
+            return value;
+        }
+
+        return value.div(getCastScale(token, value));
+    }
+
+    function getCastScale(address token, uint256 value) private returns (uint256) {
+      require(ERC20Token(token).decimals() > 0 && ERC20Token(token).decimals() <= 18);
+
+      if (ERC20Token(token).decimals() == 18) {
+          return 1;
+      }
+
+      uint256 decimals = uint256(ERC20Token(token).decimals()); // cast to uint256
+      return 10**(18 - decimals);
     }
 }

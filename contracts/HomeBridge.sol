@@ -196,6 +196,6 @@ contract HomeBridge is Initializable, BasicBridge {
         return _number & 2**255 == 2**255;
     }
 
-    function topUp() external payable {
+    function () external payable {
     }
 }
