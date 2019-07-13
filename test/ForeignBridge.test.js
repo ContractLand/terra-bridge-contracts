@@ -311,7 +311,7 @@ contract('ForeignBridge', async (accounts) => {
       foreignBridge.setDailyLimit(usdtToken.address, oneEther).should.be.fulfilled
       foreignBridge.setMaxPerTx(usdtToken.address, halfEther).should.be.fulfilled
       foreignBridge.setMinPerTx(usdtToken.address, minPerTx).should.be.fulfilled
-
+      
       foreignBridge.setDailyLimit(decimal6Token.address, oneEther).should.be.fulfilled
       foreignBridge.setMaxPerTx(decimal6Token.address, halfEther).should.be.fulfilled
       foreignBridge.setMinPerTx(decimal6Token.address, minPerTx).should.be.fulfilled
