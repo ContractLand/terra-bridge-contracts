@@ -73,3 +73,9 @@ Responsibilities and roles of the bridge:
   1. Call `transferTokenToHome` on Foreign Bridge with `homeToken` address for the token to be transferred, `recipient` address for the home side, and transfer `value` as params
   - Note, because HomeTokens are ERC827, we can use `approveAndCall` function on the token to perform both the approve and call to `transferTokenToHome` in a single call
 
+# Docker image
+Dockerfile is added to help build and push docker image of terra-bridge-contracts. To build image run:  
+- `docker build -t <repository_name>:<tagname> .`
+  
+To push docker image to the Docker Hub registry or to a self-hosted one:
+- `docker push <repository_name>:<tagname>`  
