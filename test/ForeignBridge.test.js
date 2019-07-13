@@ -2,6 +2,7 @@ const ForeignBridge = artifacts.require("ForeignBridge.sol");
 const BridgeValidators = artifacts.require("BridgeValidators.sol");
 const UpgradeableProxy = artifacts.require("AdminUpgradeabilityProxy.sol");
 const TestToken = artifacts.require("TestToken.sol");
+const TetherToken = artifacts.require("TetherToken.sol");
 
 const {ERROR_MSG, ZERO_ADDRESS, ERROR_MSG_OPCODE} = require('./helpers/setup');
 const {createMessage, sign, signatureToVRS, strip0x} = require('./helpers/helpers');
@@ -296,6 +297,7 @@ contract('ForeignBridge', async (accounts) => {
     beforeEach(async () => {
       user = accounts[4]
       erc20token = await TestToken.new('Test', 'TST', web3.toWei(10, "ether"), 18);
+      usdtToken = await TetherToken.new(10000000, 'Tether', 'USDT', 6);
       decimal6Token = await TestToken.new('Test6', 'TST', 10000000, 6); // 10 units
       decimal20Token = await TestToken.new('Test6', 'TST', 1000000000000000000000, 20); // 10 units
       foreignBridge = await ForeignBridge.new();
@@ -304,6 +306,11 @@ contract('ForeignBridge', async (accounts) => {
       foreignBridge.setDailyLimit(erc20token.address, oneEther).should.be.fulfilled
       foreignBridge.setMaxPerTx(erc20token.address, halfEther).should.be.fulfilled
       foreignBridge.setMinPerTx(erc20token.address, minPerTx).should.be.fulfilled
+
+      await foreignBridge.setUSDTAddress(usdtToken.address, {from: owner}).should.be.fulfilled;
+      foreignBridge.setDailyLimit(usdtToken.address, oneEther).should.be.fulfilled
+      foreignBridge.setMaxPerTx(usdtToken.address, halfEther).should.be.fulfilled
+      foreignBridge.setMinPerTx(usdtToken.address, minPerTx).should.be.fulfilled
 
       foreignBridge.setDailyLimit(decimal6Token.address, oneEther).should.be.fulfilled
       foreignBridge.setMaxPerTx(decimal6Token.address, halfEther).should.be.fulfilled
@@ -380,6 +387,21 @@ contract('ForeignBridge', async (accounts) => {
       const events = await getEvents(foreignBridge, {event: 'TransferToHome'});
       events[0].args.should.be.deep.equal({
         token: decimal6Token.address,
+        recipient: user,
+        value: halfEther // should transfer 0.5 ether of tokens to home
+      })
+    })
+
+    it("should handle usdt special case", async () => {
+      const usdtAmount = 500000 // 0.5 usdt unit
+      await usdtToken.transfer(user, usdtAmount).should.be.fulfilled
+      await usdtToken.approve(foreignBridge.address, usdtAmount, {from: user}).should.be.fulfilled
+
+      await foreignBridge.transferTokenToHome(usdtToken.address, user, usdtAmount, {from: user}).should.be.fulfilled;
+      '0'.should.be.bignumber.equal(await usdtToken.balanceOf(user));
+      const events = await getEvents(foreignBridge, {event: 'TransferToHome'});
+      events[0].args.should.be.deep.equal({
+        token: usdtToken.address,
         recipient: user,
         value: halfEther // should transfer 0.5 ether of tokens to home
       })

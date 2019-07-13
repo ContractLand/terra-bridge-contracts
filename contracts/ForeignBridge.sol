@@ -5,6 +5,7 @@ import "./libraries/Message.sol";
 import "./BasicBridge.sol";
 import "./interfaces/ERC20Token.sol";
 import "./migrations/Initializable.sol";
+import "./interfaces/USDT.sol";
 
 contract ForeignBridge is BasicBridge, Initializable {
     using SafeMath for uint256;
@@ -22,6 +23,9 @@ contract ForeignBridge is BasicBridge, Initializable {
     // mapping between the transfer transaction hash from the HomeBridge to whether the transfer has been processed
     mapping(bytes32 => bool) public transfers;
     /* End of V1 storage variables */
+
+    address public USDTAddress;
+    /* End of V2 storage variables */
 
     /* --- CONSTRUCTOR / INITIALIZATION --- */
 
@@ -61,7 +65,15 @@ contract ForeignBridge is BasicBridge, Initializable {
         require(withinLimit(_token, castValue18), "Transfer exceeds limit");
         totalSpentPerDay[_token][getCurrentDay()] = totalSpentPerDay[_token][getCurrentDay()].add(castValue18);
 
-        require(ERC20Token(_token).transferFrom(msg.sender, this, _value), "TransferFrom failed for ERC20 Token");
+        if (_token == USDTAddress) {
+          // Handle USDT special case since it does not have standard erc20 token interface =.=
+          uint256 balanceBefore = USDT(_token).balanceOf(this);
+          USDT(_token).transferFrom(msg.sender, this, _value);
+          // check transfer suceeded
+          require(USDT(_token).balanceOf(this) - _value == balanceBefore);
+        } else {
+          require(ERC20Token(_token).transferFrom(msg.sender, this, _value), "TransferFrom failed for ERC20 Token");
+        }
         emit TransferToHome(_token, _recipient, castValue18);
     }
 
@@ -78,6 +90,10 @@ contract ForeignBridge is BasicBridge, Initializable {
         uint256 castedAmount = castFrom18Decimal(token, amount);
         performTransfer(token, recipient, castedAmount);
         emit TransferFromHome(token, recipient, castedAmount, txHash);
+    }
+
+    function setUSDTAddress(address _addr) public onlyOwner {
+        USDTAddress = _addr;
     }
 
     /* --- INTERNAL / PRIVATE METHODS --- */
