@@ -70,7 +70,7 @@ contract ForeignBridge is BasicBridge, Initializable {
           uint256 balanceBefore = USDT(_token).balanceOf(this);
           USDT(_token).transferFrom(msg.sender, this, _value);
           // check transfer suceeded
-          require(USDT(_token).balanceOf(this) - _value == balanceBefore);
+          require(balanceBefore.add(_value) == USDT(_token).balanceOf(this));
         } else {
           require(ERC20Token(_token).transferFrom(msg.sender, this, _value), "TransferFrom failed for ERC20 Token");
         }
@@ -101,6 +101,14 @@ contract ForeignBridge is BasicBridge, Initializable {
     function performTransfer(address tokenAddress, address recipient, uint256 amount) private {
         if (tokenAddress == address(0)) {
             recipient.transfer(amount);
+            return;
+        }
+
+        if (tokenAddress == USDTAddress) {
+            uint256 balanceBefore = USDT(tokenAddress).balanceOf(recipient);
+            USDT(tokenAddress).transfer(recipient, amount);
+            // check transfer suceeded
+            require(balanceBefore.add(amount) == USDT(tokenAddress).balanceOf(recipient));
             return;
         }
 

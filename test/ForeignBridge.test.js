@@ -64,9 +64,12 @@ contract('ForeignBridge', async (accounts) => {
       foreignBridge = await ForeignBridge.new()
       erc20token = await TestToken.new('Test', 'TST', web3.toWei(1, "ether"), 18)
       decimal6Token = await TestToken.new('Test6', 'TST', 10000000, 6); // 10 units
+      usdtToken = await TetherToken.new(10000000, 'Tether', 'USDT', 6); // 10 units
+
       const oneEther = web3.toBigNumber(web3.toWei(1, "ether"))
       const halfEther = web3.toBigNumber(web3.toWei(0.5, "ether"))
       await foreignBridge.initialize(validatorContract.address, oneEther, halfEther, minPerTx, gasPrice, requireBlockConfirmations)
+      await foreignBridge.setUSDTAddress(usdtToken.address, {from: owner}).should.be.fulfilled;
     })
 
     it('should allow transferFromHome of ether', async () => {
@@ -186,6 +189,29 @@ contract('ForeignBridge', async (accounts) => {
 
       const balanceAfter = await decimal6Token.balanceOf(recipientAccount);
       balanceAfter.should.be.bignumber.equal(balanceBefore.add(decimal6TokenValue))
+      true.should.be.equal(await foreignBridge.transfers(transactionHash))
+    })
+
+    it('should handle USDT special case', async () => {
+      var recipientAccount = accounts[3];
+      const balanceBefore = await usdtToken.balanceOf(recipientAccount)
+      var usdtTokenValue = 250000; // 0.25 usdtToken unit
+      var actualTransferValue = web3.toBigNumber(web3.toWei(0.25, "ether"));
+      await usdtToken.transfer(foreignBridge.address, usdtTokenValue)
+      var transactionHash = "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80";
+      var message = createMessage(usdtToken.address, recipientAccount, actualTransferValue, transactionHash);
+      var signature = await sign(authorities[0], message)
+      var vrs = signatureToVRS(signature);
+      false.should.be.equal(await foreignBridge.transfers(transactionHash))
+      const {logs} = await foreignBridge.transferFromHome([vrs.v], [vrs.r], [vrs.s], message).should.be.fulfilled
+      logs[0].event.should.be.equal("TransferFromHome")
+      logs[0].args.token.should.be.equal(usdtToken.address)
+      logs[0].args.recipient.should.be.equal(recipientAccount)
+      logs[0].args.value.should.be.bignumber.equal(usdtTokenValue)
+      logs[0].args.transactionHash.should.be.equal(transactionHash);
+
+      const balanceAfter = await usdtToken.balanceOf(recipientAccount);
+      balanceAfter.should.be.bignumber.equal(balanceBefore.add(usdtTokenValue))
       true.should.be.equal(await foreignBridge.transfers(transactionHash))
     })
   })
