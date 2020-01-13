@@ -59,16 +59,21 @@ contract ForeignBridge is BasicBridge, Initializable {
     /* --- EXTERNAL / PUBLIC  METHODS --- */
 
     function transferNativeToHome(address _recipient) external payable {
-        require(msg.value > transferFee, "TransferNativeToHome failed due to insufficient fee");
+        require(msg.value > transferFee, "TransferNativeToHome failed: Insufficient fee");
+
         uint256 transferAmount = msg.value - transferFee;
         require(withinLimit(address(0), transferAmount), "Transfer exceeds limit");
         totalSpentPerDay[address(0)][getCurrentDay()] = totalSpentPerDay[address(0)][getCurrentDay()].add(transferAmount);
+
         // collect fee in contract
         feeCollected += transferFee;
+
         emit TransferToHome(address(0), _recipient, transferAmount);
     }
 
-    function transferTokenToHome(address _token, address _recipient, uint256 _value) external {
+    function transferTokenToHome(address _token, address _recipient, uint256 _value) external payable {
+        require(msg.value == transferFee, "TransferNativeToHome failed: Insufficient fee");
+
         uint256 castValue18 = castTo18Decimal(_token, _value);
         require(withinLimit(_token, castValue18), "Transfer exceeds limit");
         totalSpentPerDay[_token][getCurrentDay()] = totalSpentPerDay[_token][getCurrentDay()].add(castValue18);
@@ -82,6 +87,10 @@ contract ForeignBridge is BasicBridge, Initializable {
         } else {
           require(ERC20Token(_token).transferFrom(msg.sender, this, _value), "TransferFrom failed for ERC20 Token");
         }
+
+        // collect fee in contract
+        feeCollected += transferFee;
+
         emit TransferToHome(_token, _recipient, castValue18);
     }
 

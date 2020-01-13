@@ -349,7 +349,6 @@ contract('ForeignBridge', async (accounts) => {
 
       senderBalanceBefore.minus(transferAmount.plus(transferFee)).should.be.bignumber.equal(await web3.eth.getBalance(sender))
       bridgeBalanceBefore.plus(transferAmount.plus(transferFee)).should.be.bignumber.equal(await web3.eth.getBalance(foreignBridge.address))
-      // console.log((await foreignBridge.feeCollected()))
       transferFee.should.be.bignumber.equal(await foreignBridge.feeCollected())
     })
 
@@ -497,6 +496,30 @@ contract('ForeignBridge', async (accounts) => {
       await decimal20Token.approve(foreignBridge.address, decimal20Amount, {from: user}).should.be.fulfilled
 
       await foreignBridge.transferTokenToHome(decimal20Token.address, user, decimal20Amount, {from: user}).should.be.rejectedWith(ERROR_MSG);
+    })
+
+    it('should fail if transfer fee not paid', async () => {
+      const transferFee = halfEther
+      await foreignBridge.setTransferFee(transferFee, { from: owner }).should.be.fulfilled
+
+      await erc20token.transfer(user, halfEther)
+      await erc20token.approve(foreignBridge.address, halfEther, {from: user})
+      await foreignBridge.transferTokenToHome(erc20token.address, user, halfEther, {from: user}).should.be.rejectedWith(ERROR_MSG);
+    })
+
+    it('should collect fee in contract', async () => {
+      const transferFee = halfEther
+      const senderBalanceBefore = await web3.eth.getBalance(user)
+      const bridgeBalanceBefore = await web3.eth.getBalance(foreignBridge.address)
+      await foreignBridge.setTransferFee(transferFee, { from: owner }).should.be.fulfilled
+
+      await erc20token.transfer(user, halfEther)
+      await erc20token.approve(foreignBridge.address, halfEther, {from: user, gasPrice: 0})
+      await foreignBridge.transferTokenToHome(erc20token.address, user, halfEther, {from: user, value: transferFee, gasPrice: 0}).should.be.fulfilled
+
+      senderBalanceBefore.minus(transferFee).should.be.bignumber.equal(await web3.eth.getBalance(user))
+      bridgeBalanceBefore.plus(transferFee).should.be.bignumber.equal(await web3.eth.getBalance(foreignBridge.address))
+      transferFee.should.be.bignumber.equal(await foreignBridge.feeCollected())
     })
   })
 
