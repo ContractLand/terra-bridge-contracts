@@ -27,6 +27,10 @@ contract ForeignBridge is BasicBridge, Initializable {
     address public USDTAddress;
     /* End of V2 storage variables */
 
+    uint256 public transferFee; // static transfer fee. Not set in constructor. Defaults to 0
+    uint256 public feeCollected; // amount of currently collected fee in bridge contract.
+    /* End of V3 storage variables */
+
     /* --- CONSTRUCTOR / INITIALIZATION --- */
 
     function initialize(
@@ -55,9 +59,13 @@ contract ForeignBridge is BasicBridge, Initializable {
     /* --- EXTERNAL / PUBLIC  METHODS --- */
 
     function transferNativeToHome(address _recipient) external payable {
-        require(withinLimit(address(0), msg.value), "Transfer exceeds limit");
-        totalSpentPerDay[address(0)][getCurrentDay()] = totalSpentPerDay[address(0)][getCurrentDay()].add(msg.value);
-        emit TransferToHome(address(0), _recipient, msg.value);
+        require(msg.value > transferFee, "TransferNativeToHome failed due to insufficient fee");
+        uint256 transferAmount = msg.value - transferFee;
+        require(withinLimit(address(0), transferAmount), "Transfer exceeds limit");
+        totalSpentPerDay[address(0)][getCurrentDay()] = totalSpentPerDay[address(0)][getCurrentDay()].add(transferAmount);
+        // collect fee in contract
+        feeCollected += transferFee;
+        emit TransferToHome(address(0), _recipient, transferAmount);
     }
 
     function transferTokenToHome(address _token, address _recipient, uint256 _value) external {
@@ -94,6 +102,16 @@ contract ForeignBridge is BasicBridge, Initializable {
 
     function setUSDTAddress(address _addr) public onlyOwner {
         USDTAddress = _addr;
+    }
+
+    function setTransferFee(uint256 _transferFee) public onlyOwner {
+        transferFee = _transferFee;
+    }
+
+    function withdrawFee() public onlyValidator {
+        // NOTE: currently fees are only given to the validator that withdraws it
+        require(feeCollected > 0, "WithdrawFee failed: Fee is 0");
+        msg.sender.transfer(feeCollected);
     }
 
     /* --- INTERNAL / PRIVATE METHODS --- */

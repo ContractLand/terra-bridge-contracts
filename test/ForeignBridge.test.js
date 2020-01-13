@@ -317,6 +317,64 @@ contract('ForeignBridge', async (accounts) => {
       await foreignBridge.transferNativeToHome(recipient, { from: sender, value: minPerTx }).should.be.fulfilled
       await foreignBridge.transferNativeToHome(recipient, { from: sender, value: minPerTx }).should.be.rejectedWith(ERROR_MSG)
     })
+
+    it('only owner can set transferFee', async () => {
+      notOwner = accounts[1]
+      await foreignBridge.setTransferFee(1, { from: notOwner }).should.be.rejectedWith(ERROR_MSG)
+      await foreignBridge.setTransferFee(1, { from: owner }).should.be.fulfilled
+    })
+
+    it('should fail if transfer fee not paid', async () => {
+      const sender = accounts[1]
+      const recipient = accounts[2]
+      const transferAmount = halfEther
+      const transferFee = halfEther
+      const senderBalanceBefore = await web3.eth.getBalance(sender)
+      const bridgeBalanceBefore = await web3.eth.getBalance(foreignBridge.address)
+      await foreignBridge.setTransferFee(transferFee, { from: owner }).should.be.fulfilled
+
+      await foreignBridge.transferNativeToHome(recipient, { from: sender, value: transferAmount, gasPrice: 0 }).should.be.rejectedWith(ERROR_MSG)
+    })
+
+    it('should collect fee in contract', async () => {
+      const sender = accounts[1]
+      const recipient = accounts[2]
+      const transferAmount = halfEther
+      const transferFee = halfEther
+      const senderBalanceBefore = await web3.eth.getBalance(sender)
+      const bridgeBalanceBefore = await web3.eth.getBalance(foreignBridge.address)
+      await foreignBridge.setTransferFee(transferFee, { from: owner }).should.be.fulfilled
+
+      await foreignBridge.transferNativeToHome(recipient, { from: sender, value: transferAmount.plus(transferFee), gasPrice: 0 }).should.be.fulfilled
+
+      senderBalanceBefore.minus(transferAmount.plus(transferFee)).should.be.bignumber.equal(await web3.eth.getBalance(sender))
+      bridgeBalanceBefore.plus(transferAmount.plus(transferFee)).should.be.bignumber.equal(await web3.eth.getBalance(foreignBridge.address))
+      // console.log((await foreignBridge.feeCollected()))
+      transferFee.should.be.bignumber.equal(await foreignBridge.feeCollected())
+    })
+
+    it('should give all fee to the first validator who withdraws', async () => {
+      const sender = accounts[3]
+      const recipient = accounts[4]
+      const transferAmount = halfEther
+      const transferFee = halfEther
+      const validator1BalanceBefore = await web3.eth.getBalance(authorities[0])
+      await foreignBridge.setTransferFee(transferFee, { from: owner, gasPrice: 0 }).should.be.fulfilled
+
+      // require fee to be above 0
+      await foreignBridge.withdrawFee({ from: authorities[0], gasPrice: 0 }).should.be.rejectedWith(ERROR_MSG)
+
+      // only validator can call
+      await foreignBridge.withdrawFee({ from: sender, gasPrice: 0 }).should.be.rejectedWith(ERROR_MSG)
+
+      // make transfer
+      await foreignBridge.transferNativeToHome(recipient, { from: sender, value: transferAmount.plus(transferFee), gasPrice: 0 }).should.be.fulfilled
+
+      // withdraw
+      await foreignBridge.withdrawFee({ from: authorities[0], gasPrice: 0 }).should.be.fulfilled
+
+      validator1BalanceBefore.plus(transferFee).should.be.bignumber.equal(await web3.eth.getBalance(authorities[0]))
+    })
   })
 
   describe('#transferTokenToHome', async () => {
