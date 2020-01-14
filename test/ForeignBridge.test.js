@@ -352,27 +352,27 @@ contract('ForeignBridge', async (accounts) => {
       transferFee.should.be.bignumber.equal(await foreignBridge.feeCollected())
     })
 
-    it('should give all fee to the first validator who withdraws', async () => {
+    it('should allow owner to collet fee', async () => {
       const sender = accounts[3]
       const recipient = accounts[4]
       const transferAmount = halfEther
       const transferFee = halfEther
-      const validator1BalanceBefore = await web3.eth.getBalance(authorities[0])
+      const ownerBalanceBefore = await web3.eth.getBalance(owner)
       await foreignBridge.setTransferFee(transferFee, { from: owner, gasPrice: 0 }).should.be.fulfilled
 
       // require fee to be above 0
-      await foreignBridge.withdrawFee({ from: authorities[0], gasPrice: 0 }).should.be.rejectedWith(ERROR_MSG)
+      await foreignBridge.withdrawFee({ from: owner, gasPrice: 0 }).should.be.rejectedWith(ERROR_MSG)
 
-      // only validator can call
+      // only owner can call
       await foreignBridge.withdrawFee({ from: sender, gasPrice: 0 }).should.be.rejectedWith(ERROR_MSG)
 
       // make transfer
       await foreignBridge.transferNativeToHome(recipient, { from: sender, value: transferAmount.plus(transferFee), gasPrice: 0 }).should.be.fulfilled
 
       // withdraw
-      await foreignBridge.withdrawFee({ from: authorities[0], gasPrice: 0 }).should.be.fulfilled
+      await foreignBridge.withdrawFee({ from: owner, gasPrice: 0 }).should.be.fulfilled
 
-      validator1BalanceBefore.plus(transferFee).should.be.bignumber.equal(await web3.eth.getBalance(authorities[0]))
+      ownerBalanceBefore.plus(transferFee).should.be.bignumber.equal(await web3.eth.getBalance(owner))
     })
   })
 

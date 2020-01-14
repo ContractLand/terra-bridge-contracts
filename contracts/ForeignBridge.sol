@@ -117,7 +117,7 @@ contract ForeignBridge is BasicBridge, Initializable {
         transferFee = _transferFee;
     }
 
-    function withdrawFee() public onlyValidator {
+    function withdrawFee() public onlyOwner {
         // NOTE: currently fees are only given to the validator that withdraws it
         require(feeCollected > 0, "WithdrawFee failed: Fee is 0");
         msg.sender.transfer(feeCollected);
