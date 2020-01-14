@@ -72,7 +72,7 @@ contract ForeignBridge is BasicBridge, Initializable {
     }
 
     function transferTokenToHome(address _token, address _recipient, uint256 _value) external payable {
-        require(msg.value == transferFee, "TransferNativeToHome failed: Insufficient fee");
+        require(msg.value == transferFee, "TransferTokenToHome failed: Insufficient fee");
 
         uint256 castValue18 = castTo18Decimal(_token, _value);
         require(withinLimit(_token, castValue18), "Transfer exceeds limit");

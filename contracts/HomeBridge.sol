@@ -37,6 +37,10 @@ contract HomeBridge is Initializable, BasicBridge {
     // mapping between the transfer message hash and the number of validator signatures
     mapping(bytes32 => uint256) public numMessagesSigned;
     /* End of V1 storage variables */
+    uint256 public transferFee; // static transfer fee. Not set in constructor. Defaults to 0
+    uint256 public feeCollected; // amount of currently collected fee in bridge contract.
+    /* End of V3 storage variables */
+
 
     /* --- CONSTRUCTOR / INITIALIZATION --- */
 
@@ -75,13 +79,19 @@ contract HomeBridge is Initializable, BasicBridge {
     }
 
     function transferNativeToForeign(address recipient) external payable {
-        require(withinLimit(address(0), msg.value), "Transfer exceeds limit");
-        totalSpentPerDay[address(0)][getCurrentDay()] = totalSpentPerDay[address(0)][getCurrentDay()].add(msg.value);
+        require(msg.value > transferFee, "TransferNativeToForeign failed: Insufficient fee");
+        uint256 transferAmount = msg.value - transferFee;
+
+        require(withinLimit(address(0), transferAmount), "Transfer exceeds limit");
+        totalSpentPerDay[address(0)][getCurrentDay()] = totalSpentPerDay[address(0)][getCurrentDay()].add(transferAmount);
 
         address foreignToken = homeToForeignTokenMap[address(0)];
         require(foreignToken != address(0), "Foreign native token address is not 0x0");
 
-        emit TransferToForeign(foreignToken, recipient, msg.value);
+        // collect fee in contract
+        feeCollected += transferFee;
+
+        emit TransferToForeign(foreignToken, recipient, transferAmount);
     }
 
     function transferTokenToForeign(address homeToken, address recipient, uint256 value) external {
@@ -157,6 +167,16 @@ contract HomeBridge is Initializable, BasicBridge {
             numMessagesSigned[hashMsg] = markAsProcessed(signed);
             emit CollectedSignatures(msg.sender, hashMsg, reqSigs);
         }
+    }
+
+    function setTransferFee(uint256 _transferFee) public onlyOwner {
+        transferFee = _transferFee;
+    }
+
+    function withdrawFee() public onlyOwner {
+        // NOTE: currently fees are only given to the validator that withdraws it
+        require(feeCollected > 0, "WithdrawFee failed: Fee is 0");
+        msg.sender.transfer(feeCollected);
     }
 
     /* --- INTERNAL / PRIVATE METHODS --- */

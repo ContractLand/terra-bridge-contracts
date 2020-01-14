@@ -281,6 +281,74 @@ contract('HomeBridge', async (accounts) => {
         value: newMinPerTx - 1
       }).should.be.rejectedWith(ERROR_MSG)
     })
+
+    it('only owner can set transfer fee', async () => {
+      notOwner = accounts[1]
+      await homeContract.setTransferFee(1, { from: notOwner }).should.be.rejectedWith(ERROR_MSG)
+      await homeContract.setTransferFee(1, { from: owner }).should.be.fulfilled
+    })
+
+    it('should fail without fee', async () => {
+      const user = accounts[1]
+      const recipient = accounts[2]
+      const foreignNativeAddress = '0x2222222222222222222222222222222222222222'
+      const transferAmount = 1
+      const transferFee = 1
+      await homeContract.registerToken(foreignNativeAddress, ADDRESS_ZERO).should.be.fulfilled
+      await homeContract.setTransferFee(transferFee, { from: owner }).should.be.fulfilled
+
+      await homeContract.transferNativeToForeign(recipient, {
+        from: user,
+        value: transferAmount
+      }).should.be.rejectedWith(ERROR_MSG)
+    })
+
+    it('should collect fee in contract', async () => {
+      const user = accounts[1]
+      const recipient = accounts[2]
+      const foreignNativeAddress = '0x2222222222222222222222222222222222222222'
+      const transferAmount = 1
+      const transferFee = 1
+      const senderBalanceBefore = await web3.eth.getBalance(user)
+      const bridgeBalanceBefore = await web3.eth.getBalance(homeContract.address)
+      await homeContract.registerToken(foreignNativeAddress, ADDRESS_ZERO).should.be.fulfilled
+      await homeContract.setTransferFee(transferFee, { from: owner }).should.be.fulfilled
+
+      await homeContract.transferNativeToForeign(recipient, {
+        from: user,
+        value: transferAmount + transferFee,
+        gasPrice: 0
+      }).should.be.fulfilled
+
+      senderBalanceBefore.minus(transferAmount + transferFee).should.be.bignumber.equal(await web3.eth.getBalance(user))
+      bridgeBalanceBefore.plus(transferAmount + transferFee).should.be.bignumber.equal(await web3.eth.getBalance(homeContract.address))
+      transferFee.should.be.bignumber.equal(await homeContract.feeCollected())
+    })
+
+    it('should allow owner to withdraw fee', async () => {
+      const sender = accounts[3]
+      const recipient = accounts[4]
+      const foreignNativeAddress = '0x2222222222222222222222222222222222222222'
+      const transferAmount = 1
+      const transferFee = 1
+      const ownerBalanceBefore = await web3.eth.getBalance(owner)
+      await homeContract.registerToken(foreignNativeAddress, ADDRESS_ZERO, { from: owner, gasPrice: 0 }).should.be.fulfilled
+      await homeContract.setTransferFee(transferFee, { from: owner, gasPrice: 0 }).should.be.fulfilled
+
+      // require fee to be above 0
+      await homeContract.withdrawFee({ from: owner, gasPrice: 0 }).should.be.rejectedWith(ERROR_MSG)
+
+      // only owner can call
+      await homeContract.withdrawFee({ from: sender, gasPrice: 0 }).should.be.rejectedWith(ERROR_MSG)
+
+      // make transfer
+      await homeContract.transferNativeToForeign(recipient, { from: sender, value: transferAmount + transferFee, gasPrice: 0 }).should.be.fulfilled
+
+      // withdraw
+      await homeContract.withdrawFee({ from: owner, gasPrice: 0 }).should.be.fulfilled
+
+      ownerBalanceBefore.plus(transferFee).should.be.bignumber.equal(await web3.eth.getBalance(owner))
+    })
   })
 
   describe('#settings', async () => {
