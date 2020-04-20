@@ -171,6 +171,100 @@ contract('HomeBridge', async (accounts) => {
       await homeToken.transferAndCall(homeBridge.address, maxPerTx, tokenTransferCall, {from: user}).should.be.fulfilled
       await homeToken.transferAndCall(homeBridge.address, maxPerTx, tokenTransferCall, {from: user}).should.be.rejectedWith(ERROR_MSG)
     })
+
+    it('should fail without fee', async() => {
+      const owner = accounts[0]
+      const user = accounts[1]
+      const recipient = accounts[2]
+      const transferAmount = 1
+      const transferFee = 2
+      const feeTokenAddress = '0x2222222222222222222222222222222222222222'
+      const tokenTransferCall = homeBridge.contract.transferTokenToForeign.getData(homeToken.address, recipient, transferAmount)
+
+      await homeToken.mint(user, transferAmount, {from: owner }).should.be.fulfilled
+      await homeBridge.registerToken(feeTokenAddress, homeToken.address).should.be.fulfilled
+      await homeBridge.setFeeToken(feeTokenAddress, { from: owner }).should.be.fulfilled
+      await homeBridge.setTransferFee(transferFee, { from: owner }).should.be.fulfilled
+
+      await homeToken.transferAndCall(homeBridge.address, transferAmount, tokenTransferCall, {from: user}).should.be.rejectedWith(ERROR_MSG)
+    })
+
+    it('should collect fee in contract', async() => {
+      const owner = accounts[0]
+      const user = accounts[1]
+      const recipient = accounts[2]
+      const transferAmount = 1
+      const transferFee = 2
+      const foreignTokenAddress = '0x2222222222222222222222222222222222222222'
+      const feeToken = await HomeToken.new('Home Token', 'HTK', 18)
+      await feeToken.mint(user, transferFee, {from: owner }).should.be.fulfilled
+      await homeToken.mint(user, transferAmount, {from: owner }).should.be.fulfilled
+      const tokenTransferCall = homeBridge.contract.transferTokenToForeign.getData(homeToken.address, recipient, transferAmount)
+
+      // Transfer Token balance before transfer
+      const userTransferTokenBalanceBefore = await homeToken.balanceOf(user)
+      const bridgeTransferTokenBalanceBefore = await homeToken.balanceOf(homeBridge.address)
+      const transferTokenTotalSupplyBefore = await homeToken.totalSupply()
+
+      // Fee Token balance before transfer
+      const userFeeTokenBalanceBefore = await feeToken.balanceOf(user)
+      const bridgeFeeTokenBalanceBefore = await feeToken.balanceOf(homeBridge.address)
+      const feeCollectedBefore = await homeBridge.feeCollected()
+
+      await homeBridge.registerToken(foreignTokenAddress, homeToken.address).should.be.fulfilled
+      await homeBridge.setFeeToken(feeToken.address, { from: owner }).should.be.fulfilled
+      await homeBridge.setTransferFee(transferFee, { from: owner }).should.be.fulfilled
+
+      // Make transfer
+      await feeToken.approve(homeBridge.address, transferFee, {from: user}).should.be.fulfilled
+      await homeToken.transferAndCall(homeBridge.address, transferAmount, tokenTransferCall, {from: user}).should.be.fulfilled
+
+      // Check feeToken balance after transfer
+      userFeeTokenBalanceBefore.minus(transferFee).should.be.bignumber.equal(await feeToken.balanceOf(user))
+      bridgeFeeTokenBalanceBefore.plus(transferFee).should.be.bignumber.equal(await feeToken.balanceOf(homeBridge.address))
+      feeCollectedBefore.plus(transferFee).should.be.bignumber.equal(await homeBridge.feeCollected())
+
+      // Check transferToken balance after transfer
+      userTransferTokenBalanceBefore.minus(transferAmount).should.be.bignumber.equal(await homeToken.balanceOf(user))
+      bridgeTransferTokenBalanceBefore.should.be.bignumber.equal(await homeToken.balanceOf(homeBridge.address))
+      transferTokenTotalSupplyBefore.minus(transferAmount).should.be.bignumber.equal(await homeToken.totalSupply())
+    })
+
+    it('only owner can set fee token in contract', async() => {
+      notOwner = accounts[1]
+      const feeTokenAddress = '0x2222222222222222222222222222222222222222'
+      await homeBridge.setFeeToken(feeTokenAddress, { from: notOwner }).should.be.rejectedWith(ERROR_MSG)
+      await homeBridge.setFeeToken(feeTokenAddress, { from: owner }).should.be.fulfilled
+    })
+
+    it('only owner can withdraw fee in contract', async() => {
+      const owner = accounts[0]
+      const user = accounts[1]
+      const recipient = accounts[2]
+      const transferAmount = 1
+      const transferFee = 1
+      feeToken = await HomeToken.new('Home Token', 'HTK', 18)
+      await feeToken.mint(user, transferFee, {from: owner }).should.be.fulfilled
+      await homeToken.mint(user, transferAmount, {from: owner }).should.be.fulfilled
+      const tokenTransferCall = homeBridge.contract.transferTokenToForeign.getData(homeToken.address, recipient, transferAmount)
+
+      await homeBridge.registerToken(feeToken.address, homeToken.address).should.be.fulfilled
+      await homeBridge.setFeeToken(feeToken.address, { from: owner }).should.be.fulfilled
+      await homeBridge.setTransferFee(transferFee, { from: owner }).should.be.fulfilled
+
+      // require fee to be above 0
+      await homeBridge.withdrawFee({ from: owner }).should.be.rejectedWith(ERROR_MSG)
+
+      // Make transfer
+      await feeToken.approve(homeBridge.address, transferAmount, {from: user}).should.be.fulfilled
+      await homeToken.transferAndCall(homeBridge.address, transferAmount, tokenTransferCall, {from: user}).should.be.fulfilled
+
+      // Withdraw by non-owner
+      await homeBridge.withdrawFee({ from: user }).should.be.rejectedWith(ERROR_MSG)
+
+      // Withdraw by owner
+      await homeBridge.withdrawFee({ from: owner }).should.be.fulfilled
+    })
   })
 
   describe('#transferNativeToForeign', async () => {
@@ -293,10 +387,15 @@ contract('HomeBridge', async (accounts) => {
       const recipient = accounts[2]
       const foreignNativeAddress = '0x2222222222222222222222222222222222222222'
       const transferAmount = 1
-      const transferFee = 1
+      const transferFee = 2
+
+      feeToken = await HomeToken.new('Home Token', 'HTK', 18)
+      await feeToken.mint(user, transferFee, {from: owner }).should.be.fulfilled
+      await homeContract.setFeeToken(feeToken.address, { from: owner }).should.be.fulfilled
       await homeContract.registerToken(foreignNativeAddress, ADDRESS_ZERO).should.be.fulfilled
       await homeContract.setTransferFee(transferFee, { from: owner }).should.be.fulfilled
 
+      // Make transfer without feeToken approve
       await homeContract.transferNativeToForeign(recipient, {
         from: user,
         value: transferAmount
@@ -308,46 +407,39 @@ contract('HomeBridge', async (accounts) => {
       const recipient = accounts[2]
       const foreignNativeAddress = '0x2222222222222222222222222222222222222222'
       const transferAmount = 1
-      const transferFee = 1
-      const senderBalanceBefore = await web3.eth.getBalance(user)
-      const bridgeBalanceBefore = await web3.eth.getBalance(homeContract.address)
+      const transferFee = 2
+
+      feeToken = await HomeToken.new('Home Token', 'HTK', 18)
+      await feeToken.mint(user, transferFee, {from: owner }).should.be.fulfilled
+      await homeContract.setFeeToken(feeToken.address, { from: owner }).should.be.fulfilled
       await homeContract.registerToken(foreignNativeAddress, ADDRESS_ZERO).should.be.fulfilled
       await homeContract.setTransferFee(transferFee, { from: owner }).should.be.fulfilled
 
+      // Native balance before transfer
+      const senderBalanceBefore = await web3.eth.getBalance(user)
+      const bridgeBalanceBefore = await web3.eth.getBalance(homeContract.address)
+
+      // Fee Token balance before transfer
+      const userFeeTokenBalanceBefore = await feeToken.balanceOf(user)
+      const bridgeFeeTokenBalanceBefore = await feeToken.balanceOf(homeContract.address)
+      const feeCollectedBefore = await homeContract.feeCollected()
+
+      // Make transfer
+      await feeToken.approve(homeContract.address, transferFee, {from: user, gasPrice: 0}).should.be.fulfilled
       await homeContract.transferNativeToForeign(recipient, {
         from: user,
-        value: transferAmount + transferFee,
+        value: transferAmount,
         gasPrice: 0
       }).should.be.fulfilled
 
-      senderBalanceBefore.minus(transferAmount + transferFee).should.be.bignumber.equal(await web3.eth.getBalance(user))
-      bridgeBalanceBefore.plus(transferAmount + transferFee).should.be.bignumber.equal(await web3.eth.getBalance(homeContract.address))
-      transferFee.should.be.bignumber.equal(await homeContract.feeCollected())
-    })
+      // Fee token balance after transfer
+      userFeeTokenBalanceBefore.minus(transferFee).should.be.bignumber.equal(await feeToken.balanceOf(user))
+      bridgeFeeTokenBalanceBefore.plus(transferFee).should.be.bignumber.equal(await feeToken.balanceOf(homeContract.address))
+      feeCollectedBefore.plus(transferFee).should.be.bignumber.equal(await homeContract.feeCollected())
 
-    it('should allow owner to withdraw fee', async () => {
-      const sender = accounts[3]
-      const recipient = accounts[4]
-      const foreignNativeAddress = '0x2222222222222222222222222222222222222222'
-      const transferAmount = 1
-      const transferFee = 1
-      const ownerBalanceBefore = await web3.eth.getBalance(owner)
-      await homeContract.registerToken(foreignNativeAddress, ADDRESS_ZERO, { from: owner, gasPrice: 0 }).should.be.fulfilled
-      await homeContract.setTransferFee(transferFee, { from: owner, gasPrice: 0 }).should.be.fulfilled
-
-      // require fee to be above 0
-      await homeContract.withdrawFee({ from: owner, gasPrice: 0 }).should.be.rejectedWith(ERROR_MSG)
-
-      // only owner can call
-      await homeContract.withdrawFee({ from: sender, gasPrice: 0 }).should.be.rejectedWith(ERROR_MSG)
-
-      // make transfer
-      await homeContract.transferNativeToForeign(recipient, { from: sender, value: transferAmount + transferFee, gasPrice: 0 }).should.be.fulfilled
-
-      // withdraw
-      await homeContract.withdrawFee({ from: owner, gasPrice: 0 }).should.be.fulfilled
-
-      ownerBalanceBefore.plus(transferFee).should.be.bignumber.equal(await web3.eth.getBalance(owner))
+      // Native balance after transfer
+      senderBalanceBefore.minus(transferAmount).should.be.bignumber.equal(await web3.eth.getBalance(user))
+      bridgeBalanceBefore.plus(transferAmount).should.be.bignumber.equal(await web3.eth.getBalance(homeContract.address))
     })
   })
 
