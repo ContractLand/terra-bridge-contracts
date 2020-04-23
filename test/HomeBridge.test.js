@@ -242,7 +242,7 @@ contract('HomeBridge', async (accounts) => {
       const user = accounts[1]
       const recipient = accounts[2]
       const transferAmount = 1
-      const transferFee = 1
+      const transferFee = 2
       feeToken = await HomeToken.new('Home Token', 'HTK', 18)
       await feeToken.mint(user, transferFee, {from: owner }).should.be.fulfilled
       await homeToken.mint(user, transferAmount, {from: owner }).should.be.fulfilled
@@ -252,11 +252,14 @@ contract('HomeBridge', async (accounts) => {
       await homeBridge.setFeeToken(feeToken.address, { from: owner }).should.be.fulfilled
       await homeBridge.setTransferFee(transferFee, { from: owner }).should.be.fulfilled
 
+      // Get owner fee balance before
+      const ownerFeeTokenBalanceBefore = await feeToken.balanceOf(owner)
+
       // require fee to be above 0
       await homeBridge.withdrawFee({ from: owner }).should.be.rejectedWith(ERROR_MSG)
 
       // Make transfer
-      await feeToken.approve(homeBridge.address, transferAmount, {from: user}).should.be.fulfilled
+      await feeToken.approve(homeBridge.address, transferFee, {from: user}).should.be.fulfilled
       await homeToken.transferAndCall(homeBridge.address, transferAmount, tokenTransferCall, {from: user}).should.be.fulfilled
 
       // Withdraw by non-owner
@@ -264,6 +267,16 @@ contract('HomeBridge', async (accounts) => {
 
       // Withdraw by owner
       await homeBridge.withdrawFee({ from: owner }).should.be.fulfilled
+
+      // Check owner fee token balance after
+      ownerFeeTokenBalanceBefore.plus(transferFee).should.be.bignumber.equal(await feeToken.balanceOf(owner))
+
+      // Should reset fee collected in bridge
+      const zero = 0
+      zero.should.be.bignumber.equal(await homeBridge.feeCollected())
+
+      // Cannot withdraw multiple times
+      await homeBridge.withdrawFee({ from: owner }).should.be.rejectedWith(ERROR_MSG)
     })
   })
 

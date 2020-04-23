@@ -372,7 +372,15 @@ contract('ForeignBridge', async (accounts) => {
       // withdraw
       await foreignBridge.withdrawFee({ from: owner, gasPrice: 0 }).should.be.fulfilled
 
+      // Should reset fee collected in bridge
+      const zero = 0
+      zero.should.be.bignumber.equal(await foreignBridge.feeCollected())
+
+      // Check balance after
       ownerBalanceBefore.plus(transferFee).should.be.bignumber.equal(await web3.eth.getBalance(owner))
+
+      // Cannot withdraw multiple times
+      await foreignBridge.withdrawFee({ from: owner, gasPrice: 0 }).should.be.rejectedWith(ERROR_MSG)
     })
   })
 

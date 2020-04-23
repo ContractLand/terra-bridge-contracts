@@ -191,7 +191,11 @@ contract HomeBridge is Initializable, BasicBridge {
 
     function withdrawFee() public onlyOwner {
         require(feeCollected > 0, "WithdrawFee failed: Fee is 0");
-        ERC20Token(feeToken).transfer(msg.sender, feeCollected);
+        
+        uint transferAmount = feeCollected;
+        feeCollected = 0;
+
+        ERC20Token(feeToken).transfer(msg.sender, transferAmount);
     }
 
     /* --- INTERNAL / PRIVATE METHODS --- */
